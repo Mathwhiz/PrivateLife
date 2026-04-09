@@ -168,6 +168,55 @@ a {
   letter-spacing: 0.12em;
 }
 
+.meta-chip {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.habit-check-row {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 1rem 1.1rem;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.habit-check-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(17, 17, 17, 0.16);
+}
+
+.habit-check-row-active {
+  border-color: rgba(17, 17, 17, 0.24);
+  background: #f7f4ed;
+}
+
+.habit-check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--foreground);
+  background: var(--foreground);
+  color: #f8f6f1;
+  font-weight: 700;
+}
+
 .habit-row {
   display: flex;
   align-items: center;
