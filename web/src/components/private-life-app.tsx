@@ -86,8 +86,47 @@ function getReactionBadge(entry: LifeEntry) {
   return null;
 }
 
+function getDisplayRating(entry: LifeEntry) {
+  if (entry.rating !== undefined && entry.rating !== null && `${entry.rating}`.trim() !== "") {
+    return `${entry.rating}/10`;
+  }
+
+  return getReactionBadge(entry);
+}
+
 function compactMeta(entry: LifeEntry) {
-  return entry.content.split(".").map((part) => part.trim()).filter(Boolean).slice(0, 3);
+  return entry.content
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+}
+
+function excerptText(text: string, limit = 320) {
+  const compact = text.replace(/\s+/g, " ").trim();
+  if (compact.length <= limit) {
+    return compact;
+  }
+
+  return `${compact.slice(0, limit).trimEnd()}...`;
+}
+
+function normalizeHabitTitle(title: string) {
+  const lowered = title.trim().toLowerCase();
+
+  if (lowered === "bao" || lowered === "bano" || lowered === "baño") {
+    return "Baño";
+  }
+
+  if (
+    lowered === "ejercico fsico" ||
+    lowered === "ejercicio fisico" ||
+    lowered === "ejercicio físico"
+  ) {
+    return "Ejercicio físico";
+  }
+
+  return title.trim();
 }
 
 function ViewHeader({
@@ -100,11 +139,11 @@ function ViewHeader({
   aside?: React.ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+    <header className="flex flex-col gap-3 border-b border-border pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <p className="section-kicker">private life</p>
-        <h2 className="mt-2 text-3xl font-medium tracking-[-0.04em] text-foreground">{title}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted sm:text-base">{description}</p>
+        <h2 className="mt-2 text-[1.7rem] font-medium tracking-[-0.04em] text-foreground">{title}</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{description}</p>
       </div>
       {aside}
     </header>
@@ -113,29 +152,29 @@ function ViewHeader({
 
 function EmptyState({ label }: { label: string }) {
   return (
-    <article className="rounded-[1.5rem] border border-border bg-panel px-5 py-6 text-sm text-muted">
+    <article className="rounded-[1.15rem] border border-border bg-panel px-4 py-5 text-sm text-muted">
       {label}
     </article>
   );
 }
 
 function MediaCard({ entry }: { entry: LifeEntry }) {
-  const reaction = getReactionBadge(entry);
+  const rating = getDisplayRating(entry);
   const meta = compactMeta(entry);
 
   return (
-    <article className="rounded-[1.5rem] border border-border bg-panel px-5 py-5">
+    <article className="rounded-[1.15rem] border border-border bg-panel px-4 py-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.18em] text-muted">
+        <div className="space-y-1.5">
+          <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
             {entryTypeLabels[entry.type]} · {formatDate(entry.date)}
           </p>
-          <h3 className="text-xl font-medium tracking-[-0.03em] text-foreground">{entry.title}</h3>
+          <h3 className="text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
         </div>
-        {reaction ? <span className="media-badge">{reaction}</span> : null}
+        {rating ? <span className="media-badge">{rating}</span> : null}
       </div>
       {meta.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {meta.map((item) => (
             <span key={`${entry.id}-${item}`} className="meta-chip">
               {item}
@@ -149,12 +188,12 @@ function MediaCard({ entry }: { entry: LifeEntry }) {
 
 function WritingCard({ entry }: { entry: LifeEntry }) {
   return (
-    <article className="rounded-[1.5rem] border border-border bg-panel px-5 py-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-muted">
+    <article className="rounded-[1.15rem] border border-border bg-panel px-4 py-4">
+      <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
         {entrySectionLabels[normalizeSection(entry)]} · {formatDate(entry.date)}
       </p>
-      <h3 className="mt-3 text-lg font-medium tracking-[-0.03em] text-foreground">{entry.title}</h3>
-      <p className="mt-3 text-sm leading-7 text-muted whitespace-pre-line">{entry.content}</p>
+      <h3 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
+      <p className="mt-2 text-sm leading-6 text-muted">{excerptText(entry.content)}</p>
     </article>
   );
 }
@@ -167,19 +206,20 @@ function ArchiveCard({
   onTagClick: (tag: string) => void;
 }) {
   const reaction = getReactionBadge(entry);
+  const rating = getDisplayRating(entry);
 
   return (
-    <article className="rounded-[1.5rem] border border-border bg-panel px-5 py-5">
-      <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted">
+    <article className="rounded-[1.15rem] border border-border bg-panel px-4 py-4">
+      <div className="flex flex-wrap items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-muted">
         <span>{formatDate(entry.date)}</span>
         <span>{entryTypeLabels[entry.type]}</span>
         <span>{entrySectionLabels[normalizeSection(entry)]}</span>
-        {reaction ? <span className="media-badge">{reaction}</span> : null}
+        {rating ? <span className="media-badge">{rating}</span> : reaction ? <span className="media-badge">{reaction}</span> : null}
       </div>
-      <h3 className="mt-3 text-lg font-medium tracking-[-0.03em] text-foreground">{entry.title}</h3>
+      <h3 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted">{entry.content}</p>
       {entry.tags.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {entry.tags.slice(0, 6).map((tag) => (
             <button
               key={`${entry.id}-${tag}`}
@@ -230,22 +270,36 @@ export function PrivateLifeApp() {
     if (typeof window === "undefined") {
       return;
     }
+
     window.localStorage.setItem(storageKey, JSON.stringify(entries));
   }, [entries]);
 
-  const habitEntries = useMemo(
+  const normalizedEntries = useMemo(
     () =>
-      sortEntries(
-        entries.filter(
-          (entry) => entry.type === "habit" && !entry.tags.includes("summary"),
-        ),
+      entries.map((entry) =>
+        entry.type === "habit"
+          ? {
+              ...entry,
+              title: normalizeHabitTitle(entry.title),
+            }
+          : entry,
       ),
     [entries],
   );
 
+  const habitEntries = useMemo(
+    () =>
+      sortEntries(
+        normalizedEntries.filter(
+          (entry) => entry.type === "habit" && !entry.tags.includes("summary"),
+        ),
+      ),
+    [normalizedEntries],
+  );
+
   const habitCatalog = useMemo(() => {
     const seeded = quickHabits.map((habit) => ({
-      title: habit.title,
+      title: normalizeHabitTitle(habit.title),
       tags: [...habit.tags],
       content: habit.content,
     }));
@@ -254,13 +308,23 @@ export function PrivateLifeApp() {
     );
 
     for (const entry of habitEntries) {
-      if (!seen.has(entry.title)) {
-        seen.set(entry.title, {
-          title: entry.title,
+      const normalizedTitle = normalizeHabitTitle(entry.title);
+      const current = seen.get(normalizedTitle);
+
+      if (!current) {
+        seen.set(normalizedTitle, {
+          title: normalizedTitle,
           tags: entry.tags.filter((tag) => !["habit", "loop"].includes(tag)),
           content: entry.content,
         });
+        continue;
       }
+
+      seen.set(normalizedTitle, {
+        title: normalizedTitle,
+        tags: [...new Set([...current.tags, ...entry.tags.filter((tag) => !["habit", "loop"].includes(tag))])],
+        content: current.content || entry.content,
+      });
     }
 
     return [...seen.values()].sort((a, b) => a.title.localeCompare(b.title));
@@ -272,8 +336,8 @@ export function PrivateLifeApp() {
   );
 
   const mediaEntries = useMemo(
-    () => sortEntries(entries.filter((entry) => mediaTypes.includes(entry.type))),
-    [entries],
+    () => sortEntries(normalizedEntries.filter((entry) => mediaTypes.includes(entry.type))),
+    [normalizedEntries],
   );
 
   const visibleMedia = useMemo(() => {
@@ -288,7 +352,7 @@ export function PrivateLifeApp() {
   const writingEntries = useMemo(
     () =>
       sortEntries(
-        entries.filter(
+        normalizedEntries.filter(
           (entry) =>
             entry.type === "note" ||
             (entry.type === "memory" &&
@@ -296,7 +360,7 @@ export function PrivateLifeApp() {
               normalizeSection(entry) !== "general"),
         ),
       ),
-    [entries],
+    [normalizedEntries],
   );
 
   const visibleWritings = useMemo(() => {
@@ -311,16 +375,18 @@ export function PrivateLifeApp() {
   const milestoneEntries = useMemo(
     () =>
       sortEntries(
-        entries.filter((entry) => entry.type === "memory" && entry.tags.includes("milestone")),
+        normalizedEntries.filter(
+          (entry) => entry.type === "memory" && entry.tags.includes("milestone"),
+        ),
       ),
-    [entries],
+    [normalizedEntries],
   );
 
   const filteredArchive = useMemo(() => {
     const scoped =
       archiveFilter === "all"
-        ? entries
-        : entries.filter((entry) => entry.type === archiveFilter);
+        ? normalizedEntries
+        : normalizedEntries.filter((entry) => entry.type === archiveFilter);
     const normalizedQuery = deferredQuery.trim().toLowerCase();
 
     return sortEntries(
@@ -336,26 +402,23 @@ export function PrivateLifeApp() {
         return matchesQuery && matchesTag;
       }),
     );
-  }, [activeTag, archiveFilter, deferredQuery, entries]);
+  }, [activeTag, archiveFilter, deferredQuery, normalizedEntries]);
 
   const stats = useMemo(
     () => ({
-      total: entries.length,
       habits: habitCatalog.length,
       habitsToday: habitEntries.filter(
         (entry) => entry.date === new Date().toISOString().slice(0, 10),
       ).length,
       library: mediaEntries.length,
       writings: writingEntries.length,
-      milestones: milestoneEntries.length,
-      tags: new Set(entries.flatMap((entry) => entry.tags)).size,
     }),
-    [entries, habitCatalog.length, habitEntries, mediaEntries.length, milestoneEntries.length, writingEntries.length],
+    [habitCatalog.length, habitEntries, mediaEntries.length, writingEntries.length],
   );
 
   const allTags = useMemo(
-    () => [...new Set(entries.flatMap((entry) => entry.tags))].slice(0, 18),
-    [entries],
+    () => [...new Set(normalizedEntries.flatMap((entry) => entry.tags))].slice(0, 18),
+    [normalizedEntries],
   );
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -403,8 +466,9 @@ export function PrivateLifeApp() {
   }
 
   function toggleHabit(title: string) {
+    const normalizedTitle = normalizeHabitTitle(title);
     const existing = habitEntries.find(
-      (entry) => entry.title === title && entry.date === habitDate,
+      (entry) => normalizeHabitTitle(entry.title) === normalizedTitle && entry.date === habitDate,
     );
 
     if (existing) {
@@ -412,13 +476,13 @@ export function PrivateLifeApp() {
       return;
     }
 
-    const habitMeta = habitCatalog.find((habit) => habit.title === title);
+    const habitMeta = habitCatalog.find((habit) => habit.title === normalizedTitle);
     createEntry({
-      id: `${Date.now()}-${title}-${habitDate}`,
+      id: `${Date.now()}-${normalizedTitle}-${habitDate}`,
       type: "habit",
       section: "habit",
-      title,
-      content: habitMeta?.content ?? "Registro diario del habito.",
+      title: normalizedTitle,
+      content: habitMeta?.content ?? "Registro diario del hábito.",
       date: habitDate,
       tags: [...new Set(["habit", ...(habitMeta?.tags ?? [])])],
     });
@@ -484,22 +548,22 @@ export function PrivateLifeApp() {
   const currentSectionOptions = sectionOptionsByType[form.type];
 
   return (
-    <main className="mx-auto flex w-full max-w-[1520px] flex-col px-4 py-4 sm:px-6 lg:px-8">
-      <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="rounded-[2rem] border border-border bg-surface px-5 py-6 xl:sticky xl:top-4 xl:h-[calc(100vh-2rem)]">
-          <div className="border-b border-border pb-5">
+    <main className="mx-auto flex w-full max-w-[1480px] flex-col px-3 py-3 sm:px-5 lg:px-6">
+      <div className="grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="rounded-[1.5rem] border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)]">
+          <div className="border-b border-border pb-4">
             <p className="section-kicker">private life</p>
-            <h1 className="mt-3 text-3xl font-medium tracking-[-0.05em] text-foreground">
+            <h1 className="mt-2 text-[1.85rem] font-medium tracking-[-0.05em] text-foreground">
               Sistema personal.
             </h1>
-            <p className="mt-3 text-sm leading-6 text-muted">
-              Una vista activa por vez. Entras a la seccion que necesitas y trabajas ahi.
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Una sección por vez. Sin dashboard ruidoso.
             </p>
           </div>
 
-          <nav className="mt-6 grid gap-2 text-sm">
+          <nav className="mt-5 grid gap-1.5 text-sm">
             {[
-              ["habits", "Habitos"],
+              ["habits", "Hábitos"],
               ["library", "Biblioteca"],
               ["writings", "Textos"],
               ["milestones", "Hitos JW"],
@@ -517,9 +581,9 @@ export function PrivateLifeApp() {
             ))}
           </nav>
 
-          <div className="mt-8 grid gap-3">
+          <div className="mt-5 grid gap-2">
             <article className="stat-card">
-              <span className="stat-label">Habitos</span>
+              <span className="stat-label">Hábitos</span>
               <strong className="stat-value">{stats.habits}</strong>
             </article>
             <article className="stat-card">
@@ -536,7 +600,7 @@ export function PrivateLifeApp() {
             </article>
           </div>
 
-          <div className="mt-8 border-t border-border pt-5">
+          <div className="mt-5 border-t border-border pt-4">
             <p className="text-xs uppercase tracking-[0.18em] text-muted">Datos</p>
             <div className="mt-3 grid gap-2">
               <button type="button" onClick={handleExport} className="secondary-button justify-center">
@@ -560,12 +624,12 @@ export function PrivateLifeApp() {
           </div>
         </aside>
 
-        <section className="rounded-[2rem] border border-border bg-surface px-5 py-6 sm:px-7 sm:py-7">
+        <section className="rounded-[1.5rem] border border-border bg-surface px-4 py-5 sm:px-5 sm:py-5">
           {activeView === "habits" ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <ViewHeader
-                title="Habitos diarios"
-                description="Esta vista funciona como checklist diaria. Marcas lo que hiciste en una fecha concreta y queda guardado como registro de ese dia."
+                title="Hábitos diarios"
+                description="Checklist compacta para marcar lo que hiciste en un día concreto."
                 aside={
                   <label className="grid gap-2 text-sm">
                     <span className="font-medium text-foreground">Fecha</span>
@@ -573,15 +637,18 @@ export function PrivateLifeApp() {
                       type="date"
                       value={habitDate}
                       onChange={(event) => setHabitDate(event.target.value)}
-                      className="field min-w-44"
+                      className="field min-w-40"
                     />
                   </label>
                 }
               />
 
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 {habitCatalog.map((habit) => {
-                  const checked = habitsForDay.some((entry) => entry.title === habit.title);
+                  const checked = habitsForDay.some(
+                    (entry) => normalizeHabitTitle(entry.title) === habit.title,
+                  );
+
                   return (
                     <button
                       key={habit.title}
@@ -591,9 +658,9 @@ export function PrivateLifeApp() {
                     >
                       <span className="habit-check-box">{checked ? "✓" : ""}</span>
                       <span className="text-left">
-                        <span className="block text-base font-medium text-foreground">{habit.title}</span>
-                        <span className="mt-1 block text-sm text-muted">
-                          {(habit.tags ?? []).slice(0, 3).join(" · ") || "Sin categoria"}
+                        <span className="block text-sm font-medium text-foreground">{habit.title}</span>
+                        <span className="mt-0.5 block text-xs text-muted">
+                          {(habit.tags ?? []).slice(0, 3).join(" · ") || "Sin categoría"}
                         </span>
                       </span>
                     </button>
@@ -604,10 +671,10 @@ export function PrivateLifeApp() {
           ) : null}
 
           {activeView === "library" ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <ViewHeader
                 title="Biblioteca"
-                description="Peliculas, series y libros en una vista silenciosa. Fecha clara, rating visible y sin texto de importacion."
+                description="Películas, series y libros con fecha clara y tu nota visible arriba."
                 aside={
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -633,7 +700,7 @@ export function PrivateLifeApp() {
               {visibleMedia.length === 0 ? (
                 <EmptyState label="No hay items para este filtro." />
               ) : (
-                <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+                <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
                   {visibleMedia.map((entry) => (
                     <MediaCard key={entry.id} entry={entry} />
                   ))}
@@ -643,10 +710,10 @@ export function PrivateLifeApp() {
           ) : null}
 
           {activeView === "writings" ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <ViewHeader
                 title="Textos y pensamientos"
-                description="Tus ensayos filosoficos y tus entradas personales van separados. Aqui solo se ve ese mundo."
+                description="Vista compacta. Aquí se muestran previews, no los textos completos."
                 aside={
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -672,7 +739,7 @@ export function PrivateLifeApp() {
               {visibleWritings.length === 0 ? (
                 <EmptyState label="No hay textos para este filtro." />
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {visibleWritings.map((entry) => (
                     <WritingCard key={entry.id} entry={entry} />
                   ))}
@@ -682,7 +749,7 @@ export function PrivateLifeApp() {
           ) : null}
 
           {activeView === "milestones" ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <ViewHeader
                 title="Hitos JW"
                 description="Fechas, privilegios y pasos importantes de tu recorrido."
@@ -690,16 +757,13 @@ export function PrivateLifeApp() {
               {milestoneEntries.length === 0 ? (
                 <EmptyState label="No hay hitos cargados." />
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {milestoneEntries.map((entry) => (
-                    <article
-                      key={entry.id}
-                      className="rounded-[1.5rem] border border-border bg-panel px-5 py-5"
-                    >
-                      <p className="text-xs uppercase tracking-[0.18em] text-muted">
+                    <article key={entry.id} className="rounded-[1.15rem] border border-border bg-panel px-4 py-4">
+                      <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
                         {formatDate(entry.date)}
                       </p>
-                      <h3 className="mt-3 text-lg font-medium tracking-[-0.03em] text-foreground">
+                      <h3 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">
                         {entry.title}
                       </h3>
                       {entry.content ? (
@@ -713,10 +777,10 @@ export function PrivateLifeApp() {
           ) : null}
 
           {activeView === "archive" ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <ViewHeader
                 title="Archivo completo"
-                description="Busqueda global y vista unificada para cuando necesitas recorrer todo el sistema."
+                description="Búsqueda global para recorrer todo el sistema cuando lo necesitas."
               />
 
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
@@ -724,7 +788,7 @@ export function PrivateLifeApp() {
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Buscar por texto, etiqueta o seccion"
+                  placeholder="Buscar por texto, etiqueta o sección"
                   className="field"
                 />
                 {activeTag ? (
@@ -770,7 +834,7 @@ export function PrivateLifeApp() {
               {filteredArchive.length === 0 ? (
                 <EmptyState label="No hay entradas para el filtro actual." />
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {filteredArchive.map((entry) => (
                     <ArchiveCard key={entry.id} entry={entry} onTagClick={setActiveTag} />
                   ))}
@@ -780,10 +844,10 @@ export function PrivateLifeApp() {
           ) : null}
 
           {activeView === "capture" ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <ViewHeader
                 title="Nueva entrada"
-                description="Captura una entrada manual sin mezclarla con el resto de vistas."
+                description="Captura rápida para pensamiento, anécdota, texto o recuerdo."
               />
 
               <form className="grid gap-4" onSubmit={handleSubmit}>
@@ -803,7 +867,7 @@ export function PrivateLifeApp() {
                     </select>
                   </label>
                   <label className="grid gap-2 text-sm">
-                    <span className="font-medium text-foreground">Seccion</span>
+                    <span className="font-medium text-foreground">Sección</span>
                     <select
                       value={form.section}
                       onChange={(event) => updateForm("section", event.target.value as EntrySection)}
@@ -831,19 +895,19 @@ export function PrivateLifeApp() {
                       type="text"
                       value={form.tags}
                       onChange={(event) => updateForm("tags", event.target.value)}
-                      placeholder="filosofia, rutina, cine"
+                      placeholder="filosofía, rutina, cine"
                       className="field"
                     />
                   </label>
                 </div>
 
                 <label className="grid gap-2 text-sm">
-                  <span className="font-medium text-foreground">Titulo</span>
+                  <span className="font-medium text-foreground">Título</span>
                   <input
                     type="text"
                     value={form.title}
                     onChange={(event) => updateForm("title", event.target.value)}
-                    placeholder="Que quieres guardar ahora"
+                    placeholder="Qué quieres guardar ahora"
                     className="field"
                   />
                 </label>
@@ -854,8 +918,8 @@ export function PrivateLifeApp() {
                     value={form.content}
                     onChange={(event) => updateForm("content", event.target.value)}
                     placeholder="Anota el hecho, el pensamiento o el contexto."
-                    rows={12}
-                    className="field min-h-48 resize-y"
+                    rows={10}
+                    className="field min-h-40 resize-y"
                   />
                 </label>
 

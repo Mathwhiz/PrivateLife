@@ -20,19 +20,32 @@ CURATED_OUTPUT_PATH = IMPORTACIONES_DIR / "private-life-import-curado.json"
 HABITS_DIR = ARCHIVO_PERSONAL / "habitos" / "Loop Habits CSV 2026-04-09"
 SERIES_CSV = ARCHIVO_PERSONAL / "series" / "46906f9a-6a9f-4101-bc43-67a5ba7cd38d.csv"
 WRITINGS_DIR = ARCHIVO_PERSONAL / "escritos"
-LIFE_PDF = WRITINGS_DIR / "Life .pdf"
 LIFE_XLSX = ARCHIVO_PERSONAL / "peliculas" / "Life .xlsx"
 
+TEXTOS_TITLES = [
+    "Tiempo",
+    "El Diablo",
+    "Mejorar Excusandose",
+    "El Mundo es un Pendulo",
+]
 
-def clean_text(value: str | None) -> str:
-    text = (value or "").strip()
+DATE_HEADER_RE = re.compile(r"(?m)^(?:(\d{1,2}:\d{2})\s+)?(\d{1,2}/\d{1,2}/\d{2,4})\b")
+COSITAS_HEADER_RE = re.compile(
+    r"(?mi)^(el\s+(?:domingo|lunes|martes|miercoles|miércoles|jueves|viernes|sabado|sábado))\s*:"
+)
+
+
+def clean_text(value: object | None) -> str:
+    text = str(value or "").strip()
     replacements = {
-        "BaÃ±o": "Bano",
-        "BaÃƒÂ±o": "Bano",
-        "FÃ­sico": "Fisico",
-        "FÃƒÂ­sico": "Fisico",
-        "pelÃ­cula": "pelicula",
-        "pelÃƒÂ­cula": "pelicula",
+        "BaÃ±o": "Baño",
+        "BaÃƒÂ±o": "Baño",
+        "FÃ­sico": "Físico",
+        "FÃƒÂ­sico": "Físico",
+        "pelÃ­cula": "película",
+        "pelÃƒÂ­cula": "película",
+        "miÃ©rcoles": "miércoles",
+        "sÃ¡bado": "sábado",
     }
     for source, target in replacements.items():
         text = text.replace(source, target)
@@ -63,40 +76,22 @@ def sort_entries(entries: Iterable[dict]) -> list[dict]:
     return sorted(entries, key=lambda entry: (entry["date"], entry["id"]), reverse=True)
 
 
-def split_columns(line: str) -> list[str]:
-    return [part.strip() for part in re.split(r"\s{2,}", line) if part.strip()]
-
-
-def normalize_date(raw: str) -> tuple[str | None, bool]:
+def normalize_date(raw: object | None) -> tuple[str | None, bool]:
     value = clean_text(raw)
     if not value:
-        return None, False
+      return None, False
 
     if re.fullmatch(r"\d{2}/\d{2}/\d{4}", value):
         day, month, year = value.split("/")
         return f"{year}-{month}-{day}", False
-
     if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2}", value):
         day, month, year = value.split("/")
-        year_full = f"20{int(year):02d}"
-        return f"{year_full}-{int(month):02d}-{int(day):02d}", False
-
-    if re.fullmatch(r"\d{1,2}-\d{1,2}-\d{2}", value):
-        day, month, year = value.split("-")
-        year_full = f"20{int(year):02d}"
-        return f"{year_full}-{int(month):02d}-{int(day):02d}", False
-
-    if re.fullmatch(r"\d{2}/\d{4}", value):
-        month, year = value.split("/")
-        return f"{year}-{month}-01", True
-
-    if re.fullmatch(r"-?\d{4}", value):
-        return f"{value[-4:]}-01-01", True
-
+        return f"20{int(year):02d}-{int(month):02d}-{int(day):02d}", False
     if re.fullmatch(r"\d{1,2}/\d{4}", value):
         month, year = value.split("/")
         return f"{year}-{int(month):02d}-01", True
-
+    if re.fullmatch(r"-?\d{4}", value):
+        return f"{value[-4:]}-01-01", True
     return None, False
 
 
@@ -109,12 +104,17 @@ def excel_date_to_iso(value: object) -> tuple[str | None, bool]:
         year = int(value)
         if 1000 <= year <= 2100:
             return f"{year}-01-01", True
-    return normalize_date(str(value))
+    return normalize_date(value)
 
 
-def parse_habit_name(raw_name: str) -> str:
-    name = raw_name.split(" ", 1)[1] if " " in raw_name else raw_name
-    return clean_text(name).rstrip("?").strip()
+def normalize_habit_name(name: str) -> str:
+    normalized = clean_text(name).rstrip("?").strip()
+    lowered = normalized.lower()
+    if lowered in {"bao", "bano", "baño"}:
+        return "Baño"
+    if lowered in {"ejercico fsico", "ejercicio fisico", "ejercicio físico"}:
+        return "Ejercicio físico"
+    return normalized
 
 
 def parse_habits_full() -> list[dict]:
@@ -126,7 +126,8 @@ def parse_habits_full() -> list[dict]:
         if not habit_dir.is_dir():
             continue
 
-        habit_name = parse_habit_name(habit_dir.name)
+        base_name = habit_dir.name.split(" ", 1)[1] if " " in habit_dir.name else habit_dir.name
+        habit_name = normalize_habit_name(base_name)
         checkmarks_path = habit_dir / "Checkmarks.csv"
         if not checkmarks_path.exists():
             continue
@@ -134,8 +135,7 @@ def parse_habits_full() -> list[dict]:
         with checkmarks_path.open("r", encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                value = (row.get("Value") or "").strip()
-                if not value.startswith("YES"):
+                if not (row.get("Value") or "").strip().startswith("YES"):
                     continue
 
                 date = (row.get("Date") or "").strip()
@@ -143,7 +143,7 @@ def parse_habits_full() -> list[dict]:
                     continue
 
                 notes = clean_text(row.get("Notes"))
-                content = f"Registro importado desde Loop Habits para {habit_name}."
+                content = f"Registro diario de {habit_name}."
                 if notes:
                     content = f"{content} Nota: {notes}"
 
@@ -159,43 +159,11 @@ def parse_habits_full() -> list[dict]:
                     }
                 )
 
-    return entries
+    return sort_entries(entries)
 
 
-def parse_habits_summary(full_entries: list[dict]) -> list[dict]:
-    grouped: dict[str, list[dict]] = {}
-    for entry in full_entries:
-        grouped.setdefault(entry["title"], []).append(entry)
-
-    summary_entries: list[dict] = []
-    for title, entries in grouped.items():
-        sorted_group = sort_entries(entries)
-        first_date = sorted_group[-1]["date"]
-        last_date = sorted_group[0]["date"]
-        total = len(sorted_group)
-        content = (
-            f"Resumen importado desde Loop Habits. "
-            f"{total} registros positivos entre {first_date} y {last_date}."
-        )
-        summary_entries.append(
-            {
-                "id": f"habit-summary-{slugify_tag(title)}",
-                "type": "habit",
-                "section": "habit",
-                "title": title,
-                "content": content,
-                "date": last_date,
-                "tags": ["habit", "loop", "summary", slugify_tag(title)],
-            }
-        )
-
-    return sort_entries(summary_entries)
-
-
-def split_genres(value: str | None) -> list[str]:
-    if not value:
-        return []
-    return [slugify_tag(item) for item in value.split(",") if slugify_tag(item)]
+def split_genres(value: object | None) -> list[str]:
+    return [slugify_tag(item) for item in clean_text(value).split(",") if slugify_tag(item)]
 
 
 def parse_series() -> list[dict]:
@@ -211,22 +179,16 @@ def parse_series() -> list[dict]:
             if not title or not date:
                 continue
 
-            year = clean_text(row.get("Year"))
             your_rating = clean_text(row.get("Your Rating"))
             imdb_rating = clean_text(row.get("IMDb Rating"))
-            genres = split_genres(row.get("Genres"))
+            year = clean_text(row.get("Year"))
             runtime = clean_text(row.get("Runtime (mins)"))
-
             details = [
-                f"Rating personal {your_rating}/10." if your_rating else "",
                 f"IMDb {imdb_rating}." if imdb_rating else "",
                 f"{year}." if year else "",
                 f"{runtime} min." if runtime else "",
             ]
-            content = " ".join(part for part in details if part)
-
-            tags = ["series", "imported"]
-            tags.extend(genres[:4])
+            tags = ["series", "imported", *split_genres(row.get("Genres"))[:4]]
             if your_rating:
                 tags.append("rated")
 
@@ -236,83 +198,10 @@ def parse_series() -> list[dict]:
                     "type": "series",
                     "section": "series",
                     "title": title,
-                    "content": content,
+                    "content": " ".join(part for part in details if part),
                     "date": date,
+                    "rating": your_rating or None,
                     "tags": tags,
-                }
-            )
-
-    return sort_entries(entries)
-
-
-def parse_life_movies() -> list[dict]:
-    if LIFE_XLSX.exists():
-        return parse_life_movies_xlsx()
-
-    entries: list[dict] = []
-    if not LIFE_PDF.exists():
-        return entries
-
-    reader = PdfReader(str(LIFE_PDF))
-    for page in reader.pages[:8]:
-        text = page.extract_text(extraction_mode="layout") or ""
-        for line in text.splitlines():
-            parts = split_columns(line)
-            if len(parts) < 3:
-                continue
-            if parts[0].upper() == "NOMBRE":
-                continue
-
-            title = clean_text(parts[0])
-            genre_year = clean_text(parts[1])
-            date_value = clean_text(parts[2])
-            reaction = clean_text(parts[3]).lower() if len(parts) > 3 else ""
-
-            genre_match = re.match(r"(.+?)\s+(\d{4})$", genre_year)
-            if not title or not genre_match:
-                continue
-
-            normalized_date, approximate_date = normalize_date(date_value)
-            if not normalized_date:
-                continue
-
-            genres_text = clean_text(genre_match.group(1))
-            release_year = genre_match.group(2)
-
-            reaction_label = ""
-            reaction_tag = ""
-            if "wow" in reaction:
-                reaction_label = "wow"
-                reaction_tag = "wow"
-            elif "like" in reaction:
-                reaction_label = "i like"
-                reaction_tag = "liked"
-
-            content_parts = [
-                "Pelicula importada desde Life.pdf.",
-                f"Generos: {genres_text}.",
-                f"Ano: {release_year}.",
-                f"Valoracion personal en la hoja: {reaction_label}." if reaction_label else "",
-                "La fecha de visionado es aproximada en la fuente."
-                if approximate_date
-                else "",
-            ]
-            tags = ["movie", "imported", "life-pdf"]
-            tags.extend(split_genres(genres_text))
-            if reaction_tag:
-                tags.append(reaction_tag)
-            if approximate_date:
-                tags.append("approx-date")
-
-            entries.append(
-                {
-                    "id": f"movie-{slugify_tag(title)}-{normalized_date}",
-                    "type": "movie",
-                    "section": "movie",
-                    "title": title,
-                    "content": " ".join(part for part in content_parts if part),
-                    "date": normalized_date,
-                    "tags": tags[:8],
                 }
             )
 
@@ -321,63 +210,58 @@ def parse_life_movies() -> list[dict]:
 
 def parse_life_movies_xlsx() -> list[dict]:
     entries: list[dict] = []
+    if not LIFE_XLSX.exists():
+        return entries
+
     wb = load_workbook(LIFE_XLSX, data_only=True)
     if "Peliculas" not in wb.sheetnames:
         return entries
 
     ws = wb["Peliculas"]
     for row in ws.iter_rows(min_row=2, values_only=True):
-        title = clean_text(str(row[0]) if row[0] is not None else "")
-        genre_year = clean_text(str(row[4]) if len(row) > 4 and row[4] is not None else "")
-        reaction = clean_text(str(row[8]) if len(row) > 8 and row[8] is not None else "").lower()
-        if not title or not genre_year:
+        title = clean_text(row[0] if len(row) > 0 else None)
+        genre_year = clean_text(row[4] if len(row) > 4 else None)
+        watched_at, approximate_date = excel_date_to_iso(row[7] if len(row) > 7 else None)
+        reaction = clean_text(row[8] if len(row) > 8 else None).lower()
+
+        if not title or not genre_year or not watched_at:
             continue
 
         genre_match = re.match(r"(.+?)\s+(-?\d{4})$", genre_year)
-        if not genre_match:
-            year_inline = re.search(r"(\d{4})", str(row[7]) if row[7] is not None else "")
-            if year_inline and genre_year:
-                genres_text = genre_year
-                release_year = year_inline.group(1)
-            else:
-                continue
-        else:
+        if genre_match:
             genres_text = clean_text(genre_match.group(1))
             release_year = genre_match.group(2).replace("-", "")
+        else:
+            year_inline = re.search(r"(\d{4})", str(row[7] if len(row) > 7 else ""))
+            if not year_inline:
+                continue
+            genres_text = genre_year
+            release_year = year_inline.group(1)
 
-        normalized_date, approximate_date = excel_date_to_iso(row[7] if len(row) > 7 else None)
-        if not normalized_date:
-            continue
-
-        reaction_label = ""
         reaction_tag = ""
+        reaction_label = ""
         if "wow" in reaction:
-            reaction_label = "wow"
             reaction_tag = "wow"
+            reaction_label = "wow"
         elif "like" in reaction:
-            reaction_label = "i like"
             reaction_tag = "liked"
+            reaction_label = "i like"
 
-        content_parts = [
-            f"{genres_text}.",
-            f"{release_year}." if release_year else "",
-            f"{reaction_label}." if reaction_label else "",
-        ]
-        tags = ["movie", "imported", "life-xlsx"]
-        tags.extend(split_genres(genres_text))
+        tags = ["movie", "imported", "life-xlsx", *split_genres(genres_text)]
         if reaction_tag:
             tags.append(reaction_tag)
         if approximate_date:
             tags.append("approx-date")
 
+        content_parts = [f"{genres_text}.", f"{release_year}.", f"{reaction_label}." if reaction_label else ""]
         entries.append(
             {
-                "id": f"movie-{slugify_tag(title)}-{normalized_date}",
+                "id": f"movie-{slugify_tag(title)}-{watched_at}",
                 "type": "movie",
                 "section": "movie",
                 "title": title,
                 "content": " ".join(part for part in content_parts if part),
-                "date": normalized_date,
+                "date": watched_at,
                 "tags": tags[:8],
             }
         )
@@ -396,9 +280,9 @@ def parse_life_books_xlsx() -> list[dict]:
 
     ws = wb["Libros"]
     for row in ws.iter_rows(min_row=2, values_only=True):
-        title = clean_text(str(row[0]) if row[0] is not None else "")
-        author = clean_text(str(row[4]) if len(row) > 4 and row[4] is not None else "")
-        publish_year = clean_text(str(row[5]) if len(row) > 5 and row[5] is not None else "")
+        title = clean_text(row[0] if len(row) > 0 else None)
+        author = clean_text(row[4] if len(row) > 4 else None)
+        publish_year = clean_text(row[5] if len(row) > 5 else None)
         start_date, start_approx = excel_date_to_iso(row[7] if len(row) > 7 else None)
         end_date, end_approx = excel_date_to_iso(row[9] if len(row) > 9 else None)
         rating = row[12] if len(row) > 12 else None
@@ -411,19 +295,18 @@ def parse_life_books_xlsx() -> list[dict]:
         if not chosen_date:
             continue
 
-        content_parts = [
-            f"{author}." if author else "",
-            f"{publish_year}." if publish_year else "",
-            f"Inicio {start_date}." if start_date else "",
-            f"Fin {end_date}." if end_date else "",
-            f"Nota {rating}/10." if rating not in (None, "") else "",
-        ]
         tags = ["book", "imported", "life-xlsx"]
         if rating not in (None, ""):
             tags.append("rated")
         if approximate_date:
             tags.append("approx-date")
 
+        content_parts = [
+            f"{author}." if author else "",
+            f"{publish_year}." if publish_year else "",
+            f"Inicio {start_date}." if start_date else "",
+            f"Fin {end_date}." if end_date else "",
+        ]
         entries.append(
             {
                 "id": f"book-{slugify_tag(title)}-{chosen_date}",
@@ -432,6 +315,7 @@ def parse_life_books_xlsx() -> list[dict]:
                 "title": title,
                 "content": " ".join(part for part in content_parts if part),
                 "date": chosen_date,
+                "rating": rating if rating not in (None, "") else None,
                 "tags": tags,
             }
         )
@@ -450,13 +334,12 @@ def parse_jw_milestones_xlsx() -> list[dict]:
 
     ws = wb["Hitos JW"]
     for row in ws.iter_rows(min_row=2, values_only=True):
-        title = clean_text(str(row[1]) if len(row) > 1 and row[1] is not None else "")
+        title = clean_text(row[1] if len(row) > 1 else None)
         date_iso, approximate_date = excel_date_to_iso(row[3] if len(row) > 3 else None)
-        note = clean_text(str(row[4]) if len(row) > 4 and row[4] is not None else "")
+        note = clean_text(row[4] if len(row) > 4 else None)
         if not title or not date_iso:
             continue
 
-        content_parts = [f"{note}." if note else ""]
         tags = ["jw", "milestone", "life-xlsx"]
         if approximate_date:
             tags.append("approx-date")
@@ -467,7 +350,7 @@ def parse_jw_milestones_xlsx() -> list[dict]:
                 "type": "memory",
                 "section": "general",
                 "title": title,
-                "content": " ".join(part for part in content_parts if part),
+                "content": f"{note}." if note else "",
                 "date": date_iso,
                 "tags": tags,
             }
@@ -478,40 +361,12 @@ def parse_jw_milestones_xlsx() -> list[dict]:
 
 def normalize_extracted_text(text: str) -> str:
     lines = [clean_text(line) for line in text.splitlines()]
-    lines = [line for line in lines if line]
-    return "\n".join(lines)
-
-
-def infer_writing_section(stem: str) -> str:
-    name = stem.lower()
-    if "texto" in name:
-        return "philosophy"
-    if "solo" in name:
-        return "thought"
-    if "cositas" in name:
-        return "thought"
-    if "life" in name:
-        return "general"
-    return "thought"
-
-DATE_HEADER_RE = re.compile(
-    r"(?m)^(?:(\d{1,2}:\d{2})\s+)?(\d{1,2}/\d{1,2}/\d{2,4})\b"
-)
-COSITAS_HEADER_RE = re.compile(
-    r"(?mi)^(el\s+(?:domingo|lunes|martes|miercoles|miércoles|jueves|viernes|sabado|sábado))\s*:"
-)
-TEXTOS_TITLES = [
-    "Tiempo",
-    "El Diablo",
-    "Mejorar Excusandose",
-    "El Mundo es un Pendulo",
-]
+    return "\n".join(line for line in lines if line)
 
 
 def collapse_content(text: str) -> str:
     parts = [clean_text(part) for part in text.splitlines()]
-    parts = [part for part in parts if part]
-    return "\n\n".join(parts)
+    return " ".join(part for part in parts if part)
 
 
 def clip_content(text: str, limit: int = 1800) -> str:
@@ -525,13 +380,13 @@ def file_date_string(path: Path) -> str:
     return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d")
 
 
-def normalize_date_header(raw: str) -> tuple[str | None, bool]:
-    if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", raw):
-        day, month, year = raw.split("/")
-        if len(year) == 2:
-            year = f"20{int(year):02d}"
-        return f"{year}-{int(month):02d}-{int(day):02d}", False
-    return None, False
+def normalize_date_header(raw: str) -> str | None:
+    if not re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", raw):
+        return None
+    day, month, year = raw.split("/")
+    if len(year) == 2:
+        year = f"20{int(year):02d}"
+    return f"{year}-{int(month):02d}-{int(day):02d}"
 
 
 def split_solo_entries(text: str, path: Path) -> list[dict]:
@@ -545,19 +400,14 @@ def split_solo_entries(text: str, path: Path) -> list[dict]:
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         block = text[start:end].strip()
         date_raw = match.group(2)
-        date_iso, _ = normalize_date_header(date_raw)
-        if not date_iso:
-            date_iso = file_date_string(path)
-
-        body = collapse_content(block)
-        title = f"Solo {date_raw}"
+        date_iso = normalize_date_header(date_raw) or file_date_string(path)
         entries.append(
             {
                 "id": f"thought-solo-{date_iso}-{index}",
                 "type": "note",
                 "section": "thought",
-                "title": title,
-                "content": clip_content(body),
+                "title": f"Solo {date_raw}",
+                "content": clip_content(collapse_content(block)),
                 "date": date_iso,
                 "tags": ["escritos", "thought", "solo"],
             }
@@ -579,17 +429,9 @@ def split_cositas_entries(text: str, path: Path) -> list[dict]:
         block = text[start:end].strip()
         heading = clean_text(match.group(1)).title()
         inner_date_match = re.search(r"\b(\d{1,2}/\d{1,2}/\d{2,4})\b", block)
-        approximate = False
-        if inner_date_match:
-            date_iso, _ = normalize_date_header(inner_date_match.group(1))
-        else:
-            date_iso = fallback_date
-            approximate = True
-
-        title = heading
-        if approximate:
-            title = f"{heading} {index + 1}"
-
+        date_iso = normalize_date_header(inner_date_match.group(1)) if inner_date_match else None
+        approximate = date_iso is None
+        date_iso = date_iso or fallback_date
         tags = ["escritos", "thought", "cositas-xd"]
         if approximate:
             tags.append("approx-date")
@@ -599,7 +441,7 @@ def split_cositas_entries(text: str, path: Path) -> list[dict]:
                 "id": f"thought-cositas-{date_iso}-{index}",
                 "type": "note",
                 "section": "thought",
-                "title": title,
+                "title": f"{heading} {index + 1}" if approximate else heading,
                 "content": clip_content(collapse_content(block)),
                 "date": date_iso,
                 "tags": tags,
@@ -611,9 +453,7 @@ def split_cositas_entries(text: str, path: Path) -> list[dict]:
 
 def split_textos_entries(text: str, path: Path) -> list[dict]:
     entries: list[dict] = []
-    title_re = re.compile(
-        rf"(?m)^({'|'.join(re.escape(title) for title in TEXTOS_TITLES)})\s*$"
-    )
+    title_re = re.compile(rf"(?m)^({'|'.join(re.escape(title) for title in TEXTOS_TITLES)})\s*$")
     matches = list(title_re.finditer(text))
     if not matches:
         return entries
@@ -622,8 +462,8 @@ def split_textos_entries(text: str, path: Path) -> list[dict]:
     for index, match in enumerate(matches):
         start = match.start()
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        block = text[start:end].strip()
         title = clean_text(match.group(1))
+        block = text[start:end].strip()
         entries.append(
             {
                 "id": f"philosophy-{slugify_tag(title)}-{fallback_date}-{index}",
@@ -656,8 +496,7 @@ def parse_writings() -> list[dict]:
         if not normalized:
             continue
 
-        extracted_path = EXTRACTED_WRITINGS_DIR / f"{pdf_path.stem}.md"
-        extracted_path.write_text(normalized, encoding="utf-8")
+        (EXTRACTED_WRITINGS_DIR / f"{pdf_path.stem}.md").write_text(normalized, encoding="utf-8")
 
         stem = pdf_path.stem.lower().strip()
         if stem == "solo":
@@ -670,70 +509,57 @@ def parse_writings() -> list[dict]:
             entries.extend(split_textos_entries(normalized, pdf_path))
             continue
 
-        section = infer_writing_section(pdf_path.stem)
         entries.append(
             {
                 "id": f"writing-{slugify_tag(pdf_path.stem)}-{file_date_string(pdf_path)}",
                 "type": "note",
-                "section": section,
+                "section": "thought",
                 "title": clean_text(pdf_path.stem),
                 "content": clip_content(collapse_content(normalized)),
                 "date": file_date_string(pdf_path),
-                "tags": ["escritos", slugify_tag(section), slugify_tag(pdf_path.stem)],
+                "tags": ["escritos", slugify_tag(pdf_path.stem)],
             }
         )
 
     return sort_entries(entries)
 
 
-def build_payload(entries: list[dict], *, writings_included: bool, note: str) -> dict:
+def build_payload(entries: list[dict], note: str) -> dict:
     return {
         "version": 2,
         "exportedAt": None,
         "entries": sort_entries(entries),
         "meta": {
             "source": "archivo-personal",
-            "notes": [
-                note,
-                "Archivo compatible con el importador JSON de la app.",
-                "Los textos completos extraidos de PDF quedan en archivo-personal/importaciones/escritos-extraidos.",
-            ],
-            "included": {
-                "habits": HABITS_DIR.exists(),
-                "series": SERIES_CSV.exists(),
-                "writings": writings_included,
-            },
+            "notes": [note, "Archivo compatible con el importador JSON de la app."],
         },
     }
 
 
 def main() -> None:
     habits_full = parse_habits_full()
-    habits_summary = parse_habits_summary(habits_full)
     series_entries = parse_series()
-    movie_entries = parse_life_movies()
+    movie_entries = parse_life_movies_xlsx()
     book_entries = parse_life_books_xlsx()
     jw_entries = parse_jw_milestones_xlsx()
     writing_entries = parse_writings()
 
-    full_payload = build_payload(
-        [*habits_full, *series_entries, *movie_entries, *book_entries, *jw_entries, *writing_entries],
-        writings_included=bool(writing_entries),
-        note="Importacion completa con historico de habitos en detalle.",
-    )
-    curated_payload = build_payload(
-        [*habits_full, *series_entries, *movie_entries, *book_entries, *jw_entries, *writing_entries],
-        writings_included=bool(writing_entries),
-        note="Importacion curada para la app actual, con historico real de habitos y secciones separadas.",
-    )
+    full_entries = [
+        *habits_full,
+        *series_entries,
+        *movie_entries,
+        *book_entries,
+        *jw_entries,
+        *writing_entries,
+    ]
 
     IMPORTACIONES_DIR.mkdir(parents=True, exist_ok=True)
     FULL_OUTPUT_PATH.write_text(
-        json.dumps(full_payload, indent=2, ensure_ascii=True),
+        json.dumps(build_payload(full_entries, "Importación completa con histórico real."), indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
     CURATED_OUTPUT_PATH.write_text(
-        json.dumps(curated_payload, indent=2, ensure_ascii=True),
+        json.dumps(build_payload(full_entries, "Importación curada para la app actual."), indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
 
@@ -744,7 +570,6 @@ def main() -> None:
         json.dumps(
             {
                 "habits_full": len(habits_full),
-                "habits_summary": len(habits_summary),
                 "series": len(series_entries),
                 "movies": len(movie_entries),
                 "books": len(book_entries),
