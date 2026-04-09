@@ -1,0 +1,19 @@
+Position,Name,Type,Question,Description,FrequencyNumerator,FrequencyDenominator,Color,Unit,Target Type,Target Value,Archived?
+001,Escribir,YES_NO,,,1,1,#1976D2,,,,false
+002,Estudiar,YES_NO,Has estudiado hoy?,,1,1,#F9A825,,,,false
+003,Leer?,YES_NO,leiste hoy?,,1,1,#00897B,,,,false
+004,Jw,YES_NO,,,1,1,#8E24AA,,,,false
+005,X,YES_NO,x hoy?,,1,1,#D81B60,,,,false
+006,Baño?,YES_NO,baño?,,1,1,#E64A19,,,,false
+007,medicamento,YES_NO,,,1,1,#1976D2,,,,false
+008,Ejercico Físico,YES_NO,,,1,1,#D32F2F,,,,false
+009,Lol?,YES_NO,jugaste al lol?,,1,1,#E64A19,,,,false
+010,TFT,YES_NO,,,1,1,#1976D2,,,,false
+011,Minecraft,YES_NO,,,1,1,#1976D2,,,,false
+012,Poe,YES_NO,,,1,1,#1976D2,,,,false
+013,Adelantaste en la carrera?,YES_NO,,,1,1,#F9A825,,,,false
+014,Te lavaste los dientes ?,YES_NO,,,1,1,#E64A19,,,,false
+015,Te lavaste los dientes 2,YES_NO,,,1,1,#F57C00,,,,false
+016,Te lavaste los dientes 3,YES_NO,,,1,1,#E64A19,,,,false
+017,Orar,YES_NO,,,1,1,#1976D2,,,,false
+018,Libro,YES_NO,Leiste algo hoy?,,1,1,#303030,,,,false
