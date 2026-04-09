@@ -24,6 +24,7 @@ export type LifeEntry = {
   date: string;
   tags: string[];
   section?: EntrySection;
+  rating?: number | string;
 };
 
 export const entryTypeLabels: Record<EntryType, string> = {
@@ -138,6 +139,11 @@ export const quickHabits = [
     title: "Ejercicio fisico",
     content: "Registro rapido de actividad fisica hecha hoy.",
     tags: ["salud", "movimiento"],
+  },
+  {
+    title: "Baño",
+    content: "Registro rapido para cuando hiciste del 2.",
+    tags: ["salud", "cuerpo"],
   },
   {
     title: "Lectura",
