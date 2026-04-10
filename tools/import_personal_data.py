@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import difflib
 import json
 import re
 from datetime import datetime
@@ -21,6 +22,45 @@ HABITS_DIR = ARCHIVO_PERSONAL / "habitos" / "Loop Habits CSV 2026-04-09"
 SERIES_CSV = ARCHIVO_PERSONAL / "series" / "46906f9a-6a9f-4101-bc43-67a5ba7cd38d.csv"
 WRITINGS_DIR = ARCHIVO_PERSONAL / "escritos"
 LIFE_XLSX = ARCHIVO_PERSONAL / "peliculas" / "Life .xlsx"
+SERIES_TYPES = {"TV Series", "TV Mini Series"}
+MOVIE_TYPES = {
+    "Movie",
+    "movie",
+    "Feature Film",
+    "feature",
+    "TV Movie",
+    "tvMovie",
+    "TV Special",
+    "Video",
+    "Short",
+    "short",
+}
+MOVIE_TITLE_EQUIVALENTS = {
+    "threesome": ["the threesome"],
+    "happiness for beginner": ["happiness for beginners"],
+    "glass onion a knives out mystery": ["glass onion"],
+    "love at second sight mon inconnue": ["love at second sight", "mon inconnue"],
+    "koto no ha no niwa": ["kotonoha no niwa", "the garden of words"],
+    "quattro metà": ["four to dinner", "4 metà"],
+    "the hanting game": ["the hating game"],
+    "to all the boys ive loved befor": ["to all the boys ive loved before"],
+    "violet y finch": ["all the bright places"],
+    "clara y claire": ["who you think i am", "celle que vous croyez"],
+    "asesinato en el orient express": ["murder on the orient express"],
+    "misanthrope": ["to catch a killer"],
+    "heojil kyolshimdecision to leave": ["decision to leave", "heojil kyolshim"],
+    "amor de película": ["the big love picture"],
+    "godzilla king of the monsters!": ["godzilla king of the monsters"],
+    "men in black 3": ["men in black3"],
+    "furious seven": ["furious 7", "fast and furious 7"],
+    "21 blackjack": ["21"],
+    "wolverine": ["the wolverine"],
+    "x men 2": ["x2", "x2 x men united"],
+    "men in black 2": ["men in black ii"],
+    "men in black 3": ["men in black iii", "men in black 3"],
+    "the boy in the striped pyjamas": ["the boy in the striped pajamas"],
+    "spy kids all the time in the world in 4d": ["spy kids 4 all the time in the world", "spy kids all the time in the world"],
+}
 
 TEXTOS_TITLES = [
     "Tiempo",
@@ -36,8 +76,12 @@ COSITAS_HEADER_RE = re.compile(
 
 
 def clean_text(value: object | None) -> str:
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
     text = str(value or "").strip()
     replacements = {
+        "³": "3",
+        "ł": "3",
         "BaÃ±o": "Baño",
         "BaÃƒÂ±o": "Baño",
         "FÃ­sico": "Físico",
@@ -107,6 +151,10 @@ def excel_date_to_iso(value: object) -> tuple[str | None, bool]:
     return normalize_date(value)
 
 
+def is_childhood_marker(value: object) -> bool:
+    return isinstance(value, (int, float)) and float(value) < 0
+
+
 def normalize_habit_name(name: str) -> str:
     normalized = clean_text(name).rstrip("?").strip()
     lowered = normalized.lower()
@@ -166,44 +214,77 @@ def split_genres(value: object | None) -> list[str]:
     return [slugify_tag(item) for item in clean_text(value).split(",") if slugify_tag(item)]
 
 
-def parse_series() -> list[dict]:
-    entries: list[dict] = []
-    if not SERIES_CSV.exists():
-        return entries
+def find_imdb_exports() -> list[Path]:
+    candidates: list[Path] = []
+    for path in ARCHIVO_PERSONAL.rglob("*.csv"):
+        lowered = str(path).lower()
+        if "\\habitos\\" in lowered or "\\importaciones\\" in lowered:
+            continue
+        candidates.append(path)
+    return sorted(candidates)
 
-    with SERIES_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            title = clean_text(row.get("Title"))
-            date = (row.get("Date Rated") or row.get("Modified") or row.get("Created") or "").strip()
-            if not title or not date:
+
+def parse_imdb_rows(allowed_types: set[str]) -> list[dict]:
+    entries: list[dict] = []
+
+    for csv_path in find_imdb_exports():
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            fields = set(reader.fieldnames or [])
+            if "Title" not in fields or "Title Type" not in fields:
                 continue
 
-            your_rating = clean_text(row.get("Your Rating"))
-            imdb_rating = clean_text(row.get("IMDb Rating"))
-            year = clean_text(row.get("Year"))
-            runtime = clean_text(row.get("Runtime (mins)"))
-            details = [
-                f"IMDb {imdb_rating}." if imdb_rating else "",
-                f"{year}." if year else "",
-                f"{runtime} min." if runtime else "",
-            ]
-            tags = ["series", "imported", *split_genres(row.get("Genres"))[:4]]
-            if your_rating:
-                tags.append("rated")
+            for row in reader:
+                title_type = clean_text(row.get("Title Type"))
+                if title_type not in allowed_types:
+                    continue
 
-            entries.append(
-                {
-                    "id": f"series-{slugify_tag(title)}-{date}",
-                    "type": "series",
-                    "section": "series",
-                    "title": title,
-                    "content": " ".join(part for part in details if part),
-                    "date": date,
-                    "rating": your_rating or None,
-                    "tags": tags,
-                }
-            )
+                title = clean_text(row.get("Title"))
+                date = (row.get("Date Rated") or row.get("Modified") or row.get("Created") or "").strip()
+                if not title or not date:
+                    continue
+
+                entries.append(
+                    {
+                        "title": title,
+                        "original_title": clean_text(row.get("Original Title")),
+                        "date": date,
+                        "your_rating": clean_text(row.get("Your Rating")),
+                        "imdb_rating": clean_text(row.get("IMDb Rating")),
+                        "year": clean_text(row.get("Year")),
+                        "genres": split_genres(row.get("Genres")),
+                        "runtime": clean_text(row.get("Runtime (mins)")),
+                    }
+                )
+
+    return entries
+
+
+def parse_series() -> list[dict]:
+    entries: list[dict] = []
+
+    for row in parse_imdb_rows(SERIES_TYPES):
+        details = [
+            f"IMDb {row['imdb_rating']}." if row["imdb_rating"] else "",
+            f"{row['year']}." if row["year"] else "",
+            f"{row['runtime']} min." if row["runtime"] else "",
+        ]
+        tags = ["series", "imported", *row["genres"][:4]]
+        if row["your_rating"]:
+            tags.append("rated")
+
+        entries.append(
+            {
+                "id": f"series-{slugify_tag(row['title'])}-{row['date']}",
+                "type": "series",
+                "section": "series",
+                "title": row["title"],
+                "content": " ".join(part for part in details if part),
+                "date": row["date"],
+                "rating": row["your_rating"] or None,
+                "tags": tags,
+            }
+        )
 
     return sort_entries(entries)
 
@@ -221,7 +302,9 @@ def parse_life_movies_xlsx() -> list[dict]:
     for row in ws.iter_rows(min_row=2, values_only=True):
         title = clean_text(row[0] if len(row) > 0 else None)
         genre_year = clean_text(row[4] if len(row) > 4 else None)
-        watched_at, approximate_date = excel_date_to_iso(row[7] if len(row) > 7 else None)
+        raw_watched_at = row[7] if len(row) > 7 else None
+        watched_at, approximate_date = excel_date_to_iso(raw_watched_at)
+        childhood_date = is_childhood_marker(raw_watched_at)
         reaction = clean_text(row[8] if len(row) > 8 else None).lower()
 
         if not title or not genre_year or not watched_at:
@@ -252,6 +335,8 @@ def parse_life_movies_xlsx() -> list[dict]:
             tags.append(reaction_tag)
         if approximate_date:
             tags.append("approx-date")
+        if childhood_date:
+            tags.append("childhood")
 
         content_parts = [f"{genres_text}.", f"{release_year}.", f"{reaction_label}." if reaction_label else ""]
         entries.append(
@@ -262,11 +347,207 @@ def parse_life_movies_xlsx() -> list[dict]:
                 "title": title,
                 "content": " ".join(part for part in content_parts if part),
                 "date": watched_at,
+                "release_year": release_year,
                 "tags": tags[:8],
             }
         )
 
     return sort_entries(entries)
+
+
+def parse_imdb_movies() -> list[dict]:
+    entries: list[dict] = []
+
+    for row in parse_imdb_rows(MOVIE_TYPES):
+        details = [
+            f"IMDb {row['imdb_rating']}." if row["imdb_rating"] else "",
+            f"{row['year']}." if row["year"] else "",
+            f"{row['runtime']} min." if row["runtime"] else "",
+        ]
+        tags = ["movie", "imported", "imdb", *row["genres"][:4]]
+        if row["your_rating"]:
+            tags.append("rated")
+
+        entries.append(
+            {
+                "id": f"movie-imdb-{slugify_tag(row['title'])}-{row['date']}",
+                "type": "movie",
+                "section": "movie",
+                "title": row["title"],
+                "original_title": row.get("original_title"),
+                "content": " ".join(part for part in details if part),
+                "date": row["date"],
+                "release_year": row["year"],
+                "rating": row["your_rating"] or None,
+                "tags": tags,
+            }
+        )
+
+    return sort_entries(entries)
+
+
+def movie_match_key(title: str) -> str:
+    base = clean_text(title).lower()
+    replacements = {
+        "&": "and",
+        ":": "",
+        "'": "",
+        ".": "",
+        ",": "",
+        "(": "",
+        ")": "",
+        "-": " ",
+    }
+    for source, target in replacements.items():
+        base = base.replace(source, target)
+    return " ".join(base.split())
+
+
+def movie_match_aliases(title: str) -> set[str]:
+    base = movie_match_key(title)
+    aliases = {base}
+    variants = [
+        re.sub(r"^007\s+", "", base),
+        re.sub(r"\(.*?\)", "", base),
+        re.sub(r"\bthe movie\b", "", base),
+        re.sub(r"\bpart two\b", "part 2", base),
+        re.sub(r"\bpart 2\b", "part two", base),
+        re.sub(r"\biii\b", "3", base),
+        re.sub(r"\b3\b", "iii", base),
+    ]
+    for variant in variants:
+        cleaned = " ".join(variant.split())
+        if cleaned:
+            aliases.add(cleaned)
+    if ":" in base:
+        aliases.add(base.split(":")[0].strip())
+    if base.startswith("the "):
+        aliases.add(base.removeprefix("the ").strip())
+    if base.startswith("007 "):
+        aliases.add(base.removeprefix("007 ").strip())
+    for extra in MOVIE_TITLE_EQUIVALENTS.get(base, []):
+        aliases.add(movie_match_key(extra))
+    return {alias for alias in aliases if alias}
+
+
+def merge_movie_sources(life_entries: list[dict], imdb_entries: list[dict]) -> list[dict]:
+    if not imdb_entries:
+        return life_entries
+
+    imdb_by_key: dict[str, dict] = {}
+    for entry in imdb_entries:
+        alias_titles = [entry["title"]]
+        if entry.get("original_title"):
+            alias_titles.append(entry["original_title"])
+        keys = {alias for alias_title in alias_titles for alias in movie_match_aliases(alias_title)}
+        for key in keys:
+            imdb_by_key.setdefault(key, entry)
+
+    merged: list[dict] = []
+    used_keys: set[str] = set()
+    unmatched_imdb = list(imdb_entries)
+
+    for life_entry in life_entries:
+        life_keys = movie_match_aliases(life_entry["title"])
+        imdb_entry = next((imdb_by_key[key] for key in life_keys if key in imdb_by_key), None)
+        if not imdb_entry:
+            best_match = None
+            best_score = 0.0
+            for candidate in unmatched_imdb:
+                if life_entry.get("release_year") and candidate.get("release_year"):
+                    if str(life_entry["release_year"]) != str(candidate["release_year"]):
+                        continue
+                score = max(
+                    difflib.SequenceMatcher(None, life_key, imdb_key).ratio()
+                    for life_key in life_keys
+                    for imdb_key in {
+                        alias
+                        for alias_title in [candidate["title"], candidate.get("original_title") or ""]
+                        if alias_title
+                        for alias in movie_match_aliases(alias_title)
+                    }
+                )
+                if score > best_score:
+                    best_score = score
+                    best_match = candidate
+
+            if best_match and best_score >= 0.78:
+                imdb_entry = best_match
+            else:
+                merged.append(life_entry)
+                continue
+
+        used_keys.add(imdb_entry["id"])
+        unmatched_imdb = [entry for entry in unmatched_imdb if entry["id"] != imdb_entry["id"]]
+        merged.append(
+            {
+                **life_entry,
+                "title": imdb_entry["title"],
+                "rating": imdb_entry.get("rating"),
+                "content": " ".join(
+                    part
+                    for part in [
+                        life_entry["content"],
+                        imdb_entry["content"],
+                    ]
+                    if part
+                ).strip(),
+                "tags": list(dict.fromkeys([*life_entry["tags"], *imdb_entry["tags"]])),
+            }
+        )
+
+    for imdb_entry in imdb_entries:
+        if imdb_entry["id"] in used_keys:
+            continue
+        merged.append(imdb_entry)
+
+    return sort_entries(merged)
+
+
+def pick_preferred_movie_entry(current: dict, candidate: dict) -> dict:
+    current_approx = "approx-date" in current.get("tags", [])
+    candidate_approx = "approx-date" in candidate.get("tags", [])
+
+    if current_approx != candidate_approx:
+        return current if not current_approx else candidate
+
+    current_rating = current.get("rating") not in (None, "")
+    candidate_rating = candidate.get("rating") not in (None, "")
+    if current_rating != candidate_rating:
+        return current if current_rating else candidate
+
+    return current if current["date"] >= candidate["date"] else candidate
+
+
+def dedupe_movies(entries: list[dict]) -> list[dict]:
+    deduped: dict[tuple[str, str], dict] = {}
+
+    for entry in entries:
+        release_year = str(entry.get("release_year") or "")
+        key = (movie_match_key(entry["title"]), release_year)
+        existing = deduped.get(key)
+        if not existing:
+            deduped[key] = entry
+            continue
+
+        preferred = pick_preferred_movie_entry(existing, entry)
+        other = entry if preferred is existing else existing
+        deduped[key] = {
+            **preferred,
+            "content": " ".join(
+                part for part in [preferred.get("content", ""), other.get("content", "")] if part
+            ).strip(),
+            "tags": list(dict.fromkeys([*preferred.get("tags", []), *other.get("tags", [])])),
+            "rating": preferred.get("rating") or other.get("rating"),
+        }
+
+    cleaned = []
+    for entry in deduped.values():
+        if entry["title"] == "Men in Black3":
+            entry = {**entry, "title": "Men in Black 3"}
+        cleaned.append(entry)
+
+    return sort_entries(cleaned)
 
 
 def parse_life_books_xlsx() -> list[dict]:
@@ -539,7 +820,9 @@ def build_payload(entries: list[dict], note: str) -> dict:
 def main() -> None:
     habits_full = parse_habits_full()
     series_entries = parse_series()
-    movie_entries = parse_life_movies_xlsx()
+    life_movie_entries = parse_life_movies_xlsx()
+    imdb_movie_entries = parse_imdb_movies()
+    movie_entries = dedupe_movies(merge_movie_sources(life_movie_entries, imdb_movie_entries))
     book_entries = parse_life_books_xlsx()
     jw_entries = parse_jw_milestones_xlsx()
     writing_entries = parse_writings()
@@ -571,7 +854,9 @@ def main() -> None:
             {
                 "habits_full": len(habits_full),
                 "series": len(series_entries),
-                "movies": len(movie_entries),
+                "movies_life": len(life_movie_entries),
+                "movies_imdb": len(imdb_movie_entries),
+                "movies_merged": len(movie_entries),
                 "books": len(book_entries),
                 "jw_milestones": len(jw_entries),
                 "writings": len(writing_entries),
