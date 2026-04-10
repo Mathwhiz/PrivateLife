@@ -1,17 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3f1ec;
-  --foreground: #111111;
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --panel: #fbfaf7;
-  --border: rgba(17, 17, 17, 0.1);
-  --muted: #5e5a54;
-  --accent: #171717;
-  --accent-soft: #ece7de;
-  --deep: #111111;
-  --sun: #d9d0c3;
+  --background: #f5efe6;
+  --foreground: #1a2233;
+  --surface: rgba(255, 251, 246, 0.86);
+  --surface-strong: rgba(255, 252, 249, 0.96);
+  --panel: #fffaf4;
+  --border: rgba(44, 63, 91, 0.12);
+  --muted: #5d6475;
+  --accent: #1f4f46;
+  --accent-soft: #d8ebe4;
+  --deep: #1a2233;
+  --sun: #ebb980;
+  --rose: #cb7a74;
+  --gold: #d79d54;
 }
 
 @theme inline {
@@ -26,6 +28,8 @@
   --color-accent-soft: var(--accent-soft);
   --color-deep: var(--deep);
   --color-sun: var(--sun);
+  --color-rose: var(--rose);
+  --color-gold: var(--gold);
   --font-sans: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Georgia", serif;
   --font-mono: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
 }
@@ -43,8 +47,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   background-image:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 24rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(243, 241, 236, 0.96));
+    radial-gradient(circle at top left, rgba(235, 185, 128, 0.24), transparent 22rem),
+    radial-gradient(circle at bottom right, rgba(203, 122, 116, 0.16), transparent 20rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(245, 239, 230, 0.98));
 }
 
 a {
@@ -108,7 +113,7 @@ a {
 .stat-card {
   border: 1px solid var(--border);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.56);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(248, 241, 232, 0.88));
   padding: 0.8rem 0.9rem;
 }
 
@@ -161,7 +166,7 @@ a {
 
 .media-badge {
   border-radius: 999px;
-  background: var(--foreground);
+  background: var(--accent);
   color: #f8f6f1;
   padding: 0.22rem 0.52rem;
   font-size: 0.68rem;
@@ -172,10 +177,10 @@ a {
 .meta-chip {
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(216, 235, 228, 0.7);
   padding: 0.26rem 0.55rem;
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--accent);
 }
 
 .habit-check-row {
@@ -253,7 +258,7 @@ a {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 0.95rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   padding: 0.72rem 0.85rem;
   color: var(--foreground);
   outline: none;
@@ -263,8 +268,8 @@ a {
 }
 
 .field:focus {
-  border-color: rgba(17, 17, 17, 0.35);
-  box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.06);
+  border-color: rgba(31, 79, 70, 0.35);
+  box-shadow: 0 0 0 4px rgba(31, 79, 70, 0.08);
 }
 
 .primary-button,
@@ -286,22 +291,78 @@ a {
 }
 
 .primary-button {
-  border: 1px solid var(--foreground);
-  background: var(--foreground);
+  border: 1px solid var(--accent);
+  background: var(--accent);
   color: #f8f6f1;
 }
 
 .secondary-button,
 .filter-button {
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--foreground);
 }
 
 .filter-button-active {
-  border: 1px solid var(--foreground);
-  background: var(--foreground);
+  border: 1px solid var(--accent);
+  background: var(--accent);
   color: #f8f6f1;
+}
+
+.habit-toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.62rem 0.72rem;
+  color: var(--foreground);
+  font-size: 0.88rem;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.habit-toggle-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 79, 70, 0.25);
+}
+
+.habit-toggle-pill-active {
+  background: rgba(216, 235, 228, 0.82);
+  border-color: rgba(31, 79, 70, 0.32);
+}
+
+.habit-toggle-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(31, 79, 70, 0.35);
+  background: rgba(31, 79, 70, 0.08);
+  color: var(--accent);
+  font-size: 0.75rem;
+  flex: 0 0 auto;
+}
+
+.habit-bar-track {
+  position: relative;
+  overflow: hidden;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(31, 79, 70, 0.12);
+}
+
+.habit-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rose), var(--gold));
 }
 
 .primary-button:hover,

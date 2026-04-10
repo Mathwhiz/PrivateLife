@@ -4,7 +4,7 @@ import csv
 import difflib
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -68,6 +68,8 @@ TEXTOS_TITLES = [
     "Mejorar Excusandose",
     "El Mundo es un Pendulo",
 ]
+
+THOUGHT_PERIOD_START = datetime(2024, 9, 3)
 
 DATE_HEADER_RE = re.compile(r"(?m)^(?:(\d{1,2}:\d{2})\s+)?(\d{1,2}/\d{1,2}/\d{2,4})\b")
 COSITAS_HEADER_RE = re.compile(
@@ -661,6 +663,10 @@ def file_date_string(path: Path) -> str:
     return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d")
 
 
+def thought_fallback_date(index: int, offset: int = 0) -> str:
+    return (THOUGHT_PERIOD_START + timedelta(days=index + offset)).strftime("%Y-%m-%d")
+
+
 def normalize_date_header(raw: str) -> str | None:
     if not re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", raw):
         return None
@@ -681,7 +687,7 @@ def split_solo_entries(text: str, path: Path) -> list[dict]:
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         block = text[start:end].strip()
         date_raw = match.group(2)
-        date_iso = normalize_date_header(date_raw) or file_date_string(path)
+        date_iso = normalize_date_header(date_raw) or thought_fallback_date(index)
         entries.append(
             {
                 "id": f"thought-solo-{date_iso}-{index}",
@@ -703,7 +709,6 @@ def split_cositas_entries(text: str, path: Path) -> list[dict]:
     if not matches:
         return entries
 
-    fallback_date = file_date_string(path)
     for index, match in enumerate(matches):
         start = match.start()
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
@@ -712,7 +717,7 @@ def split_cositas_entries(text: str, path: Path) -> list[dict]:
         inner_date_match = re.search(r"\b(\d{1,2}/\d{1,2}/\d{2,4})\b", block)
         date_iso = normalize_date_header(inner_date_match.group(1)) if inner_date_match else None
         approximate = date_iso is None
-        date_iso = date_iso or fallback_date
+        date_iso = date_iso or thought_fallback_date(index, offset=12)
         tags = ["escritos", "thought", "cositas-xd"]
         if approximate:
             tags.append("approx-date")
