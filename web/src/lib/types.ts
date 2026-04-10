@@ -141,7 +141,7 @@ export const quickHabits = [
     tags: ["salud", "movimiento"],
   },
   {
-    title: "Baño",
+    title: "Ba\u00f1o",
     content: "Registro rapido para cuando hiciste del 2.",
     tags: ["salud", "cuerpo"],
   },
