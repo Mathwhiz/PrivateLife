@@ -336,6 +336,28 @@ a {
   border-color: rgba(31, 79, 70, 0.32);
 }
 
+.habit-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: rgba(31, 79, 70, 0.08);
+  color: var(--accent);
+  font-size: 1.2rem;
+  line-height: 1;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+
+.habit-add-button:hover {
+  transform: translateY(-1px);
+  background: rgba(31, 79, 70, 0.16);
+}
+
 .habit-toggle-box {
   display: inline-flex;
   align-items: center;
