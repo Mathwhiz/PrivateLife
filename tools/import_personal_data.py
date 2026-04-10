@@ -213,7 +213,26 @@ def parse_habits_full() -> list[dict]:
 
 
 def split_genres(value: object | None) -> list[str]:
-    return [slugify_tag(item) for item in clean_text(value).split(",") if slugify_tag(item)]
+    text = clean_text(value)
+    if not text:
+        return []
+
+    normalized = (
+        text.replace(" y ", ",")
+        .replace(" Y ", ",")
+        .replace(" e ", ",")
+        .replace(" E ", ",")
+    )
+
+    genres: list[str] = []
+    seen: set[str] = set()
+    for item in normalized.split(","):
+        tag = slugify_tag(item)
+        if not tag or tag in seen:
+            continue
+        genres.append(tag)
+        seen.add(tag)
+    return genres
 
 
 def find_imdb_exports() -> list[Path]:
