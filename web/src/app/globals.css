@@ -303,6 +303,24 @@ a {
   color: var(--foreground);
 }
 
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.62rem 0.95rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border: 1px solid rgba(239, 127, 127, 0.36);
+  background: rgba(239, 127, 127, 0.12);
+  color: #ffb1b1;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
 .filter-button-active {
   border: 1px solid var(--accent);
   background: var(--accent);
@@ -370,6 +388,11 @@ a {
 
 .habit-inline-link {
   flex: 0 0 auto;
+  min-height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.35rem 0.62rem;
   font-size: 0.72rem;
   color: var(--muted);
   text-transform: uppercase;
@@ -378,6 +401,13 @@ a {
 
 .habit-inline-link:hover {
   color: var(--accent);
+}
+
+.habit-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
 }
 
 .habit-toggle-box {
@@ -411,6 +441,7 @@ a {
 
 .primary-button:hover,
 .secondary-button:hover,
+.danger-button:hover,
 .filter-button:hover,
 .filter-button-active:hover {
   transform: translateY(-1px);
