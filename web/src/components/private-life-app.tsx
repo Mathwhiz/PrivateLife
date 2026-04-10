@@ -715,6 +715,13 @@ export function PrivateLifeApp() {
     setIsHabitComposerOpen(false);
   }
 
+  function deleteHabitDraft() {
+    if (!habitDraft.originalTitle) {
+      return;
+    }
+    deleteHabit(habitDraft.originalTitle);
+  }
+
   function openImportPicker() {
     importInputRef.current?.click();
   }
@@ -869,33 +876,42 @@ export function PrivateLifeApp() {
                     </button>
                   </div>
 
-                  <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
-                    {habitCatalog.map((habit) => {
-                      const checked = habitsForDay.some((entry) => entry.title === habit.title);
-                      return (
-                        <div key={habit.title} className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}>
+                    <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+                      {habitCatalog.map((habit) => {
+                        const checked = habitsForDay.some((entry) => entry.title === habit.title);
+                        return (
+                          <div key={habit.title} className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}>
                           <button
                             type="button"
                             onClick={() => toggleHabit(habit.title)}
                             className="habit-toggle-main"
                           >
-                            <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
-                            <span className="truncate">{habit.title}</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="habit-inline-link"
-                            onClick={() => {
-                              setSelectedHabit(habit.title);
-                              setHabitViewMode("detail");
-                            }}
-                          >
-                            Ver
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                              <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
+                              <span className="truncate">{habit.title}</span>
+                            </button>
+                            <div className="habit-inline-actions">
+                              <button
+                                type="button"
+                                className="habit-inline-link"
+                                onClick={() => {
+                                  setSelectedHabit(habit.title);
+                                  setHabitViewMode("detail");
+                                }}
+                              >
+                                Ver
+                              </button>
+                              <button
+                                type="button"
+                                className="habit-inline-link"
+                                onClick={() => startEditingHabit(habit.title)}
+                              >
+                                Editar
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
 
                   {isHabitComposerOpen ? (
                     <form className="grid gap-3 rounded-[1rem] border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
@@ -935,35 +951,40 @@ export function PrivateLifeApp() {
                         rows={3}
                         className="field resize-y"
                       />
-                      <div className="flex justify-end">
-                        <button type="submit" className="primary-button">
-                          Guardar habito
-                        </button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          {habitDraft.originalTitle ? (
+                            <button type="button" className="danger-button" onClick={deleteHabitDraft}>
+                              Eliminar
+                            </button>
+                          ) : null}
+                          <button type="submit" className="primary-button">
+                            Guardar habito
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+                  </div>
+                ) : selectedHabitMeta && habitStats ? (
+                  <div className="space-y-4">
+                    <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="section-kicker">habito activo</p>
+                          <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
+                          <p className="mt-2 text-sm leading-6 text-muted">
+                            {selectedHabitMeta.content || "Sin descripcion"}
+                          </p>
+                        </div>
+                        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                          <button type="button" className="secondary-button" onClick={() => startEditingHabit(selectedHabitMeta.title)}>
+                            Editar
+                          </button>
+                          <button type="button" className="danger-button" onClick={() => deleteHabit(selectedHabitMeta.title)}>
+                            Eliminar
+                          </button>
+                        </div>
                       </div>
-                    </form>
-                  ) : null}
-                </div>
-              ) : selectedHabitMeta && habitStats ? (
-                <div className="space-y-4">
-                  <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="section-kicker">habito activo</p>
-                        <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-muted">
-                          {selectedHabitMeta.content || "Sin descripcion"}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="button" className="secondary-button" onClick={() => startEditingHabit(selectedHabitMeta.title)}>
-                          Editar
-                        </button>
-                        <button type="button" className="secondary-button" onClick={() => deleteHabit(selectedHabitMeta.title)}>
-                          Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  </article>
+                    </article>
 
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     <article className="stat-card">
