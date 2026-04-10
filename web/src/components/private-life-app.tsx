@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { loadEntries, saveEntries } from "@/lib/persistence";
 import {
   entrySectionLabels,
@@ -61,6 +61,8 @@ type HabitStats = {
   weekdayCounts: number[];
   lastDone: string | null;
 };
+
+type HabitViewMode = "checklist" | "detail";
 
 const defaultType: EntryType = "memory";
 
@@ -175,6 +177,12 @@ function daysBetween(reference: string, target: string) {
   const ref = startOfDay(new Date(`${reference}T12:00:00`));
   const tar = startOfDay(new Date(`${target}T12:00:00`));
   return Math.floor((ref.getTime() - tar.getTime()) / 86_400_000);
+}
+
+function makeEntryId(prefix: string, ...parts: string[]) {
+  return [prefix, ...parts.map((part) => part.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""))]
+    .filter(Boolean)
+    .join("-");
 }
 
 function isHabitTemplateEntry(entry: LifeEntry) {
@@ -298,7 +306,6 @@ function ArchiveCard({
 }
 
 export function PrivateLifeApp() {
-  const importRef = useRef<HTMLInputElement>(null);
   const [entries, setEntries] = useState<LifeEntry[]>(initialEntries);
   const [syncSource, setSyncSource] = useState<"supabase" | "local">("local");
   const [isHydrated, setIsHydrated] = useState(false);
@@ -312,6 +319,7 @@ export function PrivateLifeApp() {
   const [habitDraft, setHabitDraft] = useState<HabitDraft>(defaultHabitDraft);
   const [isHabitComposerOpen, setIsHabitComposerOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<string | null>(null);
+  const [habitViewMode, setHabitViewMode] = useState<HabitViewMode>("checklist");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(searchQuery);
@@ -407,20 +415,16 @@ export function PrivateLifeApp() {
     return [...catalog.values()].sort((a, b) => a.title.localeCompare(b.title));
   }, [habitLogs, habitTemplateEntries]);
 
-  useEffect(() => {
-    if (!selectedHabit && habitCatalog.length > 0) {
-      setSelectedHabit(habitCatalog[0].title);
-      return;
+  const activeHabitTitle = useMemo(() => {
+    if (selectedHabit && habitCatalog.some((habit) => habit.title === selectedHabit)) {
+      return selectedHabit;
     }
-
-    if (selectedHabit && !habitCatalog.some((habit) => habit.title === selectedHabit)) {
-      setSelectedHabit(habitCatalog[0]?.title ?? null);
-    }
+    return habitCatalog[0]?.title ?? null;
   }, [habitCatalog, selectedHabit]);
 
   const selectedHabitMeta = useMemo(
-    () => habitCatalog.find((habit) => habit.title === selectedHabit) ?? null,
-    [habitCatalog, selectedHabit],
+    () => habitCatalog.find((habit) => habit.title === activeHabitTitle) ?? null,
+    [activeHabitTitle, habitCatalog],
   );
 
   const habitsForDay = useMemo(
@@ -429,12 +433,12 @@ export function PrivateLifeApp() {
   );
 
   const selectedHabitLogs = useMemo(
-    () => habitLogs.filter((entry) => entry.title === selectedHabit),
-    [habitLogs, selectedHabit],
+    () => habitLogs.filter((entry) => entry.title === activeHabitTitle),
+    [activeHabitTitle, habitLogs],
   );
 
   const habitStats = useMemo<HabitStats | null>(() => {
-    if (!selectedHabit) {
+    if (!activeHabitTitle) {
       return null;
     }
 
@@ -483,7 +487,7 @@ export function PrivateLifeApp() {
       weekdayCounts,
       lastDone: selectedHabitLogs[0]?.date ?? null,
     };
-  }, [habitDate, selectedHabit, selectedHabitLogs]);
+  }, [activeHabitTitle, habitDate, selectedHabitLogs]);
 
   const mediaEntries = useMemo(
     () => sortEntries(normalizedEntries.filter((entry) => mediaTypes.includes(entry.type))),
@@ -568,16 +572,6 @@ export function PrivateLifeApp() {
     );
   }, [activeTag, archiveFilter, deferredQuery, normalizedEntries]);
 
-  const stats = useMemo(
-    () => ({
-      habits: habitCatalog.length,
-      habitsToday: habitsForDay.length,
-      library: mediaEntries.length,
-      writings: writingEntries.length,
-    }),
-    [habitCatalog.length, habitsForDay.length, mediaEntries.length, writingEntries.length],
-  );
-
   const allTags = useMemo(
     () => [...new Set(normalizedEntries.flatMap((entry) => entry.tags))].slice(0, 20),
     [normalizedEntries],
@@ -612,7 +606,7 @@ export function PrivateLifeApp() {
     }
 
     createEntry({
-      id: `${Date.now()}`,
+      id: makeEntryId(form.type, form.date, title, content.slice(0, 24)),
       type: form.type,
       section: form.section,
       title,
@@ -637,7 +631,7 @@ export function PrivateLifeApp() {
 
     const habitMeta = habitCatalog.find((habit) => habit.title === title);
     createEntry({
-      id: `${Date.now()}-${title}-${habitDate}`,
+      id: makeEntryId("habit-log", title, habitDate),
       type: "habit",
       section: "habit",
       title,
@@ -672,7 +666,7 @@ export function PrivateLifeApp() {
     const templateEntry: LifeEntry = {
       id:
         habitTemplateEntries.find((entry) => entry.title === habitDraft.originalTitle)?.id ??
-        `habit-template-${Date.now()}`,
+        makeEntryId("habit-template", title),
       type: "habit",
       section: "habit",
       title,
@@ -719,65 +713,21 @@ export function PrivateLifeApp() {
     setIsHabitComposerOpen(false);
   }
 
-  function handleExport() {
-    const payload = {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      entries,
-    };
-
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const date = new Date().toISOString().slice(0, 10);
-
-    link.href = url;
-    link.download = `private-life-backup-${date}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    void file.text().then((text) => {
-      try {
-        const parsed = JSON.parse(text) as { entries?: LifeEntry[] };
-        if (!Array.isArray(parsed.entries)) {
-          return;
-        }
-
-        const validEntries = parsed.entries.filter(
-          (entry): entry is LifeEntry =>
-            typeof entry.id === "string" &&
-            typeof entry.type === "string" &&
-            typeof entry.title === "string" &&
-            typeof entry.content === "string" &&
-            typeof entry.date === "string" &&
-            Array.isArray(entry.tags),
-        );
-
-        if (validEntries.length > 0) {
-          setEntries(validEntries);
-          setArchiveFilter("all");
-          setLibraryFilter("all-media");
-          setGenreFilter("all-genres");
-          setWritingFilter("all-writing");
-          setActiveTag(null);
-          setSearchQuery("");
-        }
-      } finally {
-        event.target.value = "";
-      }
-    });
-  }
-
   const currentSectionOptions = sectionOptionsByType[form.type];
+
+  if (!isHydrated) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-[1520px] items-center justify-center px-4 py-10">
+        <div className="loading-card">
+          <p className="section-kicker">private life</p>
+          <h1 className="mt-3 text-2xl font-medium text-foreground">Cargando archivo...</h1>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Estoy trayendo tus datos desde {syncSource === "supabase" ? "Supabase" : "localStorage"}.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-5 lg:px-6">
@@ -813,52 +763,11 @@ export function PrivateLifeApp() {
             ))}
           </nav>
 
-          <div className="mt-5 grid gap-2">
-            <article className="stat-card">
-              <span className="stat-label">Habitos</span>
-              <strong className="stat-value">{stats.habits}</strong>
-            </article>
-            <article className="stat-card">
-              <span className="stat-label">Checks hoy</span>
-              <strong className="stat-value">{stats.habitsToday}</strong>
-            </article>
-            <article className="stat-card">
-              <span className="stat-label">Biblioteca</span>
-              <strong className="stat-value">{stats.library}</strong>
-            </article>
-            <article className="stat-card">
-              <span className="stat-label">Textos</span>
-              <strong className="stat-value">{stats.writings}</strong>
-            </article>
-          </div>
-
-          <div className="mt-5 border-t border-border pt-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted">Datos</p>
-            <div className="mt-3 grid gap-2">
-              <button type="button" onClick={handleExport} className="secondary-button justify-center">
-                Exportar JSON
-              </button>
-              <button
-                type="button"
-                onClick={() => importRef.current?.click()}
-                className="primary-button justify-center"
-              >
-                Importar JSON
-              </button>
-              <input
-                ref={importRef}
-                type="file"
-                accept="application/json"
-                onChange={handleImport}
-                className="hidden"
-              />
-              <p className="text-xs leading-5 text-muted">
-                Para sincronizar en todos lados hace falta conectar una base remota con credenciales.
-              </p>
-              <p className="text-xs leading-5 text-muted">
-                Persistencia activa: {syncSource === "supabase" ? "Supabase" : "localStorage"}
-              </p>
-            </div>
+          <div className="mt-6 rounded-[1rem] border border-border bg-panel px-4 py-4">
+            <p className="section-kicker">Sincronizacion</p>
+            <p className="mt-2 text-sm text-foreground">
+              {syncSource === "supabase" ? "Supabase activo" : "localStorage activo"}
+            </p>
           </div>
         </aside>
 
@@ -867,21 +776,32 @@ export function PrivateLifeApp() {
             <div className="space-y-5">
               <ViewHeader
                 title="Habitos diarios"
-                description="Checklist compacta, estadisticas simples y edicion del catalogo."
+                description={
+                  habitViewMode === "checklist"
+                    ? "Checklist compacta para resolver el dia sin ruido."
+                    : "Detalle del habito con estadisticas y edicion."
+                }
                 aside={
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium text-foreground">Fecha</span>
-                    <input
-                      type="date"
-                      value={habitDate}
-                      onChange={(event) => setHabitDate(event.target.value)}
-                      className="field min-w-40"
-                    />
-                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {habitViewMode === "detail" ? (
+                      <button type="button" className="secondary-button" onClick={() => setHabitViewMode("checklist")}>
+                        Volver
+                      </button>
+                    ) : null}
+                    <label className="grid gap-2 text-sm">
+                      <span className="font-medium text-foreground">Fecha</span>
+                      <input
+                        type="date"
+                        value={habitDate}
+                        onChange={(event) => setHabitDate(event.target.value)}
+                        className="field min-w-40"
+                      />
+                    </label>
+                  </div>
                 }
               />
 
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_360px]">
+              {habitViewMode === "checklist" ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -904,18 +824,26 @@ export function PrivateLifeApp() {
                     {habitCatalog.map((habit) => {
                       const checked = habitsForDay.some((entry) => entry.title === habit.title);
                       return (
-                        <button
-                          key={habit.title}
-                          type="button"
-                          onClick={() => {
-                            setSelectedHabit(habit.title);
-                            toggleHabit(habit.title);
-                          }}
-                          className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}
-                        >
-                          <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
-                          <span className="truncate">{habit.title}</span>
-                        </button>
+                        <div key={habit.title} className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}>
+                          <button
+                            type="button"
+                            onClick={() => toggleHabit(habit.title)}
+                            className="habit-toggle-main"
+                          >
+                            <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
+                            <span className="truncate">{habit.title}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="habit-inline-link"
+                            onClick={() => {
+                              setSelectedHabit(habit.title);
+                              setHabitViewMode("detail");
+                            }}
+                          >
+                            Ver
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -966,88 +894,94 @@ export function PrivateLifeApp() {
                     </form>
                   ) : null}
                 </div>
-
+              ) : selectedHabitMeta && habitStats ? (
                 <div className="space-y-4">
-                  {selectedHabitMeta && habitStats ? (
-                    <>
-                      <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="section-kicker">habito activo</p>
-                            <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
-                            <p className="mt-2 text-sm leading-6 text-muted">
-                              {selectedHabitMeta.content || "Sin descripcion"}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button type="button" className="secondary-button" onClick={() => startEditingHabit(selectedHabitMeta.title)}>
-                              Editar
-                            </button>
-                            <button type="button" className="secondary-button" onClick={() => deleteHabit(selectedHabitMeta.title)}>
-                              Eliminar
-                            </button>
-                          </div>
-                        </div>
-                      </article>
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <article className="stat-card">
-                          <span className="stat-label">7 dias</span>
-                          <strong className="stat-value">{habitStats.week}</strong>
-                        </article>
-                        <article className="stat-card">
-                          <span className="stat-label">30 dias</span>
-                          <strong className="stat-value">{habitStats.month}</strong>
-                        </article>
-                        <article className="stat-card">
-                          <span className="stat-label">365 dias</span>
-                          <strong className="stat-value">{habitStats.year}</strong>
-                        </article>
-                        <article className="stat-card">
-                          <span className="stat-label">Total</span>
-                          <strong className="stat-value">{habitStats.total}</strong>
-                        </article>
-                        <article className="stat-card">
-                          <span className="stat-label">Racha actual</span>
-                          <strong className="stat-value">{habitStats.currentStreak}</strong>
-                        </article>
-                        <article className="stat-card">
-                          <span className="stat-label">Mejor racha</span>
-                          <strong className="stat-value">{habitStats.bestStreak}</strong>
-                        </article>
-                        <article className="stat-card sm:col-span-2">
-                          <span className="stat-label">Constancia 30 dias</span>
-                          <strong className="stat-value">{habitStats.completionRate30}%</strong>
-                        </article>
-                      </div>
-
-                      <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
-                        <p className="section-kicker">Patron semanal</p>
-                        <div className="mt-4 grid gap-2">
-                          {["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"].map((label, index) => {
-                            const value = habitStats.weekdayCounts[index];
-                            const width = habitStats.total === 0 ? 0 : Math.max(10, (value / habitStats.total) * 100);
-                            return (
-                              <div key={label} className="grid grid-cols-[36px_minmax(0,1fr)_24px] items-center gap-3">
-                                <span className="text-xs text-muted">{label}</span>
-                                <div className="habit-bar-track">
-                                  <span className="habit-bar-fill" style={{ width: `${width}%` }} />
-                                </div>
-                                <span className="text-xs text-foreground">{value}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <p className="mt-4 text-xs text-muted">
-                          Ultima vez: {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
+                  <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="section-kicker">habito activo</p>
+                        <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-muted">
+                          {selectedHabitMeta.content || "Sin descripcion"}
                         </p>
-                      </article>
-                    </>
-                  ) : (
-                    <EmptyState label="Elige un habito para ver estadisticas y editarlo." />
-                  )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" className="secondary-button" onClick={() => startEditingHabit(selectedHabitMeta.title)}>
+                          Editar
+                        </button>
+                        <button type="button" className="secondary-button" onClick={() => deleteHabit(selectedHabitMeta.title)}>
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <article className="stat-card">
+                      <span className="stat-label">7 dias</span>
+                      <strong className="stat-value">{habitStats.week}</strong>
+                    </article>
+                    <article className="stat-card">
+                      <span className="stat-label">30 dias</span>
+                      <strong className="stat-value">{habitStats.month}</strong>
+                    </article>
+                    <article className="stat-card">
+                      <span className="stat-label">365 dias</span>
+                      <strong className="stat-value">{habitStats.year}</strong>
+                    </article>
+                    <article className="stat-card">
+                      <span className="stat-label">Total</span>
+                      <strong className="stat-value">{habitStats.total}</strong>
+                    </article>
+                    <article className="stat-card">
+                      <span className="stat-label">Racha actual</span>
+                      <strong className="stat-value">{habitStats.currentStreak}</strong>
+                    </article>
+                    <article className="stat-card">
+                      <span className="stat-label">Mejor racha</span>
+                      <strong className="stat-value">{habitStats.bestStreak}</strong>
+                    </article>
+                  </div>
+
+                  <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                    <div className="flex items-end justify-between gap-3">
+                      <div>
+                        <p className="section-kicker">Constancia</p>
+                        <strong className="mt-2 block text-3xl font-medium text-foreground">
+                          {habitStats.completionRate30}%
+                        </strong>
+                        <p className="mt-2 text-sm text-muted">
+                          Porcentaje de dias cumplidos en los ultimos 30 dias.
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted">
+                        Ultima vez: {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
+                      </p>
+                    </div>
+                  </article>
+
+                  <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                    <p className="section-kicker">Patron semanal</p>
+                    <div className="mt-4 grid gap-2">
+                      {["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"].map((label, index) => {
+                        const value = habitStats.weekdayCounts[index];
+                        const width = habitStats.total === 0 ? 0 : Math.max(10, (value / habitStats.total) * 100);
+                        return (
+                          <div key={label} className="grid grid-cols-[36px_minmax(0,1fr)_24px] items-center gap-3">
+                            <span className="text-xs text-muted">{label}</span>
+                            <div className="habit-bar-track">
+                              <span className="habit-bar-fill" style={{ width: `${width}%` }} />
+                            </div>
+                            <span className="text-xs text-foreground">{value}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </article>
                 </div>
-              </div>
+              ) : (
+                <EmptyState label="Elige un habito para ver estadisticas y editarlo." />
+              )}
             </div>
           ) : null}
 

@@ -310,9 +310,10 @@ a {
 }
 
 .habit-toggle-pill {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: space-between;
+  gap: 0.5rem;
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 0.95rem;
@@ -324,6 +325,15 @@ a {
     border-color 160ms ease,
     background-color 160ms ease,
     transform 160ms ease;
+}
+
+.habit-toggle-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
 }
 
 .habit-toggle-pill:hover {
@@ -356,6 +366,18 @@ a {
 .habit-add-button:hover {
   transform: translateY(-1px);
   background: rgba(31, 79, 70, 0.16);
+}
+
+.habit-inline-link {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.habit-inline-link:hover {
+  color: var(--accent);
 }
 
 .habit-toggle-box {
