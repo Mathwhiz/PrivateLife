@@ -14,6 +14,7 @@ import {
 } from "@/lib/types";
 
 const habitTemplateTag = "habit-template";
+const habitHiddenTag = "habit-hidden";
 const systemMediaTags = new Set([
   "movie",
   "series",
@@ -187,6 +188,10 @@ function makeEntryId(prefix: string, ...parts: string[]) {
 
 function isHabitTemplateEntry(entry: LifeEntry) {
   return entry.type === "habit" && entry.tags.includes(habitTemplateTag);
+}
+
+function isHiddenHabitTemplateEntry(entry: LifeEntry) {
+  return isHabitTemplateEntry(entry) && entry.tags.includes(habitHiddenTag);
 }
 
 function isHabitLogEntry(entry: LifeEntry) {
@@ -380,15 +385,31 @@ export function PrivateLifeApp() {
     [normalizedEntries],
   );
 
+  const hiddenHabitTitles = useMemo(
+    () =>
+      new Set(
+        habitTemplateEntries
+          .filter((entry) => isHiddenHabitTemplateEntry(entry))
+          .map((entry) => normalizeHabitTitle(entry.title)),
+      ),
+    [habitTemplateEntries],
+  );
+
   const habitCatalog = useMemo(() => {
     const catalog = new Map<string, { title: string; tags: string[]; content: string }>();
 
     for (const habit of quickHabits) {
       const title = normalizeHabitTitle(habit.title);
+      if (hiddenHabitTitles.has(title)) {
+        continue;
+      }
       catalog.set(title, { title, tags: [...habit.tags], content: habit.content });
     }
 
     for (const entry of habitTemplateEntries) {
+      if (isHiddenHabitTemplateEntry(entry)) {
+        continue;
+      }
       catalog.set(entry.title, {
         title: entry.title,
         tags: entry.tags.filter((tag) => !["habit", habitTemplateTag].includes(tag)),
@@ -415,7 +436,7 @@ export function PrivateLifeApp() {
     }
 
     return [...catalog.values()].sort((a, b) => a.title.localeCompare(b.title));
-  }, [habitLogs, habitTemplateEntries]);
+  }, [habitLogs, habitTemplateEntries, hiddenHabitTitles]);
 
   const activeHabitTitle = useMemo(() => {
     if (selectedHabit && habitCatalog.some((habit) => habit.title === selectedHabit)) {
@@ -682,30 +703,71 @@ export function PrivateLifeApp() {
           .map((tag) => tag.trim())
           .filter(Boolean),
       ],
-    };
+      };
 
-    setEntries((current) =>
-      current
-        .map((entry) => {
-          if (habitDraft.originalTitle && entry.type === "habit" && entry.title === habitDraft.originalTitle) {
-            return { ...entry, title, content: templateEntry.content };
-          }
+      const shouldHideOriginalQuickHabit =
+        Boolean(habitDraft.originalTitle) &&
+        habitDraft.originalTitle !== title &&
+        quickHabits.some((habit) => normalizeHabitTitle(habit.title) === habitDraft.originalTitle);
+
+      const hiddenOriginalEntry: LifeEntry | null =
+        shouldHideOriginalQuickHabit && habitDraft.originalTitle
+          ? {
+              id: makeEntryId("habit-hidden", habitDraft.originalTitle),
+              type: "habit",
+              section: "habit",
+              title: habitDraft.originalTitle,
+              content: "Habito base ocultado.",
+              date: new Date().toISOString().slice(0, 10),
+              tags: ["habit", habitTemplateTag, habitHiddenTag],
+            }
+          : null;
+
+      setEntries((current) =>
+        current
+          .filter((entry) => !hiddenOriginalEntry || entry.id !== hiddenOriginalEntry.id)
+          .map((entry) => {
+            if (habitDraft.originalTitle && entry.type === "habit" && entry.title === habitDraft.originalTitle) {
+              return { ...entry, title, content: templateEntry.content };
+            }
 
           if (entry.id === templateEntry.id) {
             return templateEntry;
           }
 
-          return entry;
-        })
-        .concat(current.some((entry) => entry.id === templateEntry.id) ? [] : [templateEntry]),
-    );
+            return entry;
+          })
+          .concat(current.some((entry) => entry.id === templateEntry.id) ? [] : [templateEntry])
+          .concat(hiddenOriginalEntry ? [hiddenOriginalEntry] : []),
+      );
     setSelectedHabit(title);
     setHabitDraft(defaultHabitDraft());
     setIsHabitComposerOpen(false);
   }
 
   function deleteHabit(title: string) {
-    setEntries((current) => current.filter((entry) => !(entry.type === "habit" && entry.title === title)));
+    const shouldHideQuickHabit = quickHabits.some((habit) => normalizeHabitTitle(habit.title) === title);
+    const hiddenEntry: LifeEntry | null = shouldHideQuickHabit
+      ? {
+          id: makeEntryId("habit-hidden", title),
+          type: "habit",
+          section: "habit",
+          title,
+          content: "Habito base ocultado.",
+          date: new Date().toISOString().slice(0, 10),
+          tags: ["habit", habitTemplateTag, habitHiddenTag],
+        }
+      : null;
+
+    setEntries((current) => {
+      const filtered = current.filter(
+        (entry) =>
+          !(entry.type === "habit" && entry.title === title) &&
+          !(hiddenEntry && entry.id === hiddenEntry.id),
+      );
+
+      return hiddenEntry ? [...filtered, hiddenEntry] : filtered;
+    });
     if (selectedHabit === title) {
       setSelectedHabit(null);
     }
