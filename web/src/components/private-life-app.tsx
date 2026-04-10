@@ -50,6 +50,18 @@ type HabitDraft = {
   tags: string;
 };
 
+type HabitStats = {
+  total: number;
+  week: number;
+  month: number;
+  year: number;
+  currentStreak: number;
+  bestStreak: number;
+  completionRate30: number;
+  weekdayCounts: number[];
+  lastDone: string | null;
+};
+
 const defaultType: EntryType = "memory";
 
 const defaultFormState = (): FormState => ({
@@ -298,6 +310,7 @@ export function PrivateLifeApp() {
   const [habitDate, setHabitDate] = useState(new Date().toISOString().slice(0, 10));
   const [form, setForm] = useState<FormState>(defaultFormState);
   const [habitDraft, setHabitDraft] = useState<HabitDraft>(defaultHabitDraft);
+  const [isHabitComposerOpen, setIsHabitComposerOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -420,22 +433,53 @@ export function PrivateLifeApp() {
     [habitLogs, selectedHabit],
   );
 
-  const habitStats = useMemo(() => {
+  const habitStats = useMemo<HabitStats | null>(() => {
     if (!selectedHabit) {
       return null;
     }
 
     const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
+    const uniqueDates = [...new Set(selectedHabitLogs.map((entry) => entry.date))].sort((a, b) => b.localeCompare(a));
+
     for (const entry of selectedHabitLogs) {
       const day = new Date(`${entry.date}T12:00:00`).getDay();
       weekdayCounts[day] += 1;
     }
+
+    let currentStreak = 0;
+    for (let index = 0; index < uniqueDates.length; index += 1) {
+      if (daysBetween(habitDate, uniqueDates[index]) === index) {
+        currentStreak += 1;
+      } else if (index > 0 || daysBetween(habitDate, uniqueDates[index]) !== 0) {
+        break;
+      }
+    }
+
+    let bestStreak = 0;
+    let streak = 0;
+    let previousDate: string | null = null;
+    const ascendingDates = [...uniqueDates].reverse();
+    for (const date of ascendingDates) {
+      if (!previousDate) {
+        streak = 1;
+      } else {
+        const gap = daysBetween(date, previousDate);
+        streak = gap === 1 ? streak + 1 : 1;
+      }
+      previousDate = date;
+      bestStreak = Math.max(bestStreak, streak);
+    }
+
+    const completionRate30 = Math.round((selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 29).length / 30) * 100);
 
     return {
       total: selectedHabitLogs.length,
       week: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 6).length,
       month: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 29).length,
       year: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 364).length,
+      currentStreak,
+      bestStreak,
+      completionRate30,
       weekdayCounts,
       lastDone: selectedHabitLogs[0]?.date ?? null,
     };
@@ -615,6 +659,7 @@ export function PrivateLifeApp() {
       content: habitMeta.content,
       tags: habitMeta.tags.join(", "),
     });
+    setIsHabitComposerOpen(true);
   }
 
   function saveHabitTemplate(event: React.FormEvent<HTMLFormElement>) {
@@ -660,6 +705,7 @@ export function PrivateLifeApp() {
     );
     setSelectedHabit(title);
     setHabitDraft(defaultHabitDraft());
+    setIsHabitComposerOpen(false);
   }
 
   function deleteHabit(title: string) {
@@ -670,6 +716,7 @@ export function PrivateLifeApp() {
     if (habitDraft.originalTitle === title) {
       setHabitDraft(defaultHabitDraft());
     }
+    setIsHabitComposerOpen(false);
   }
 
   function handleExport() {
@@ -836,6 +883,23 @@ export function PrivateLifeApp() {
 
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_360px]">
                 <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="section-kicker">Checklist</p>
+                      <p className="mt-1 text-sm text-muted">Marca lo de hoy y listo.</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="habit-add-button"
+                      onClick={() => {
+                        setHabitDraft(defaultHabitDraft());
+                        setIsHabitComposerOpen((current) => !current);
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+
                   <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
                     {habitCatalog.map((habit) => {
                       const checked = habitsForDay.some((entry) => entry.title === habit.title);
@@ -856,44 +920,51 @@ export function PrivateLifeApp() {
                     })}
                   </div>
 
-                  <form className="grid gap-3 rounded-[1rem] border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-medium text-foreground">
-                        {habitDraft.originalTitle ? "Editar habito" : "Crear habito"}
-                      </h3>
-                      {habitDraft.originalTitle ? (
-                        <button type="button" className="text-xs text-muted" onClick={() => setHabitDraft(defaultHabitDraft())}>
-                          Cancelar
+                  {isHabitComposerOpen ? (
+                    <form className="grid gap-3 rounded-[1rem] border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-sm font-medium text-foreground">
+                          {habitDraft.originalTitle ? "Editar habito" : "Crear habito"}
+                        </h3>
+                        <button
+                          type="button"
+                          className="text-xs text-muted"
+                          onClick={() => {
+                            setHabitDraft(defaultHabitDraft());
+                            setIsHabitComposerOpen(false);
+                          }}
+                        >
+                          Cerrar
                         </button>
-                      ) : null}
-                    </div>
-                    <input
-                      type="text"
-                      value={habitDraft.title}
-                      onChange={(event) => setHabitDraft((current) => ({ ...current, title: event.target.value }))}
-                      placeholder="Nombre del habito"
-                      className="field"
-                    />
-                    <input
-                      type="text"
-                      value={habitDraft.tags}
-                      onChange={(event) => setHabitDraft((current) => ({ ...current, tags: event.target.value }))}
-                      placeholder="salud, rutina, estudio"
-                      className="field"
-                    />
-                    <textarea
-                      value={habitDraft.content}
-                      onChange={(event) => setHabitDraft((current) => ({ ...current, content: event.target.value }))}
-                      placeholder="Contexto corto del habito"
-                      rows={3}
-                      className="field resize-y"
-                    />
-                    <div className="flex justify-end">
-                      <button type="submit" className="primary-button">
-                        Guardar habito
-                      </button>
-                    </div>
-                  </form>
+                      </div>
+                      <input
+                        type="text"
+                        value={habitDraft.title}
+                        onChange={(event) => setHabitDraft((current) => ({ ...current, title: event.target.value }))}
+                        placeholder="Nombre del habito"
+                        className="field"
+                      />
+                      <input
+                        type="text"
+                        value={habitDraft.tags}
+                        onChange={(event) => setHabitDraft((current) => ({ ...current, tags: event.target.value }))}
+                        placeholder="salud, rutina, estudio"
+                        className="field"
+                      />
+                      <textarea
+                        value={habitDraft.content}
+                        onChange={(event) => setHabitDraft((current) => ({ ...current, content: event.target.value }))}
+                        placeholder="Contexto corto del habito"
+                        rows={3}
+                        className="field resize-y"
+                      />
+                      <div className="flex justify-end">
+                        <button type="submit" className="primary-button">
+                          Guardar habito
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
                 </div>
 
                 <div className="space-y-4">
@@ -935,6 +1006,18 @@ export function PrivateLifeApp() {
                         <article className="stat-card">
                           <span className="stat-label">Total</span>
                           <strong className="stat-value">{habitStats.total}</strong>
+                        </article>
+                        <article className="stat-card">
+                          <span className="stat-label">Racha actual</span>
+                          <strong className="stat-value">{habitStats.currentStreak}</strong>
+                        </article>
+                        <article className="stat-card">
+                          <span className="stat-label">Mejor racha</span>
+                          <strong className="stat-value">{habitStats.bestStreak}</strong>
+                        </article>
+                        <article className="stat-card sm:col-span-2">
+                          <span className="stat-label">Constancia 30 dias</span>
+                          <strong className="stat-value">{habitStats.completionRate30}%</strong>
                         </article>
                       </div>
 
