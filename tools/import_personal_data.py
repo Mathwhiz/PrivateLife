@@ -125,14 +125,29 @@ def sort_entries(entries: Iterable[dict]) -> list[dict]:
 def normalize_date(raw: object | None) -> tuple[str | None, bool]:
     value = clean_text(raw)
     if not value:
-      return None, False
+        return None, False
+
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return value, False
 
     if re.fullmatch(r"\d{2}/\d{2}/\d{4}", value):
-        day, month, year = value.split("/")
-        return f"{year}-{month}-{day}", False
+        first, second, year = value.split("/")
+        left = int(first)
+        right = int(second)
+        if right > 12 and left <= 12:
+            month, day = left, right
+        else:
+            day, month = left, right
+        return f"{year}-{month:02d}-{day:02d}", False
     if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2}", value):
-        day, month, year = value.split("/")
-        return f"20{int(year):02d}-{int(month):02d}-{int(day):02d}", False
+        first, second, year = value.split("/")
+        left = int(first)
+        right = int(second)
+        if right > 12 and left <= 12:
+            month, day = left, right
+        else:
+            day, month = left, right
+        return f"20{int(year):02d}-{month:02d}-{day:02d}", False
     if re.fullmatch(r"\d{1,2}/\d{4}", value):
         month, year = value.split("/")
         return f"{year}-{int(month):02d}-01", True

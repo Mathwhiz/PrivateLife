@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5efe6;
-  --foreground: #1a2233;
-  --surface: rgba(255, 251, 246, 0.86);
-  --surface-strong: rgba(255, 252, 249, 0.96);
-  --panel: #fffaf4;
-  --border: rgba(44, 63, 91, 0.12);
-  --muted: #5d6475;
-  --accent: #1f4f46;
-  --accent-soft: #d8ebe4;
-  --deep: #1a2233;
-  --sun: #ebb980;
-  --rose: #cb7a74;
-  --gold: #d79d54;
+  --background: #0d1117;
+  --foreground: #edf2ff;
+  --surface: rgba(17, 23, 34, 0.9);
+  --surface-strong: rgba(20, 27, 41, 0.96);
+  --panel: #151d2b;
+  --border: rgba(155, 176, 218, 0.16);
+  --muted: #99a6c4;
+  --accent: #7cb8ff;
+  --accent-soft: rgba(124, 184, 255, 0.14);
+  --deep: #05080f;
+  --sun: #f1b968;
+  --rose: #ef7f7f;
+  --gold: #dec37d;
 }
 
 @theme inline {
@@ -30,7 +30,7 @@
   --color-sun: var(--sun);
   --color-rose: var(--rose);
   --color-gold: var(--gold);
-  --font-sans: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Georgia", serif;
+  --font-sans: "Aptos", "Manrope", "Segoe UI", "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
 }
 
@@ -47,9 +47,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   background-image:
-    radial-gradient(circle at top left, rgba(235, 185, 128, 0.24), transparent 22rem),
-    radial-gradient(circle at bottom right, rgba(203, 122, 116, 0.16), transparent 20rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(245, 239, 230, 0.98));
+    radial-gradient(circle at top left, rgba(124, 184, 255, 0.16), transparent 24rem),
+    radial-gradient(circle at bottom right, rgba(239, 127, 127, 0.12), transparent 22rem),
+    linear-gradient(180deg, rgba(7, 10, 16, 0.92), rgba(13, 17, 23, 1));
 }
 
 a {
@@ -67,8 +67,8 @@ a {
 }
 
 .paper {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(250, 248, 244, 0.92));
-  box-shadow: 0 18px 40px rgba(17, 17, 17, 0.04);
+  background: linear-gradient(180deg, rgba(19, 26, 39, 0.96), rgba(14, 19, 30, 0.94));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.26);
 }
 
 .eyebrow,
@@ -97,7 +97,7 @@ a {
   border-radius: 999px;
   padding: 0.9rem 1rem;
   color: var(--foreground);
-  background: rgba(255, 255, 255, 0.44);
+  background: rgba(255, 255, 255, 0.03);
   transition:
     background-color 160ms ease,
     border-color 160ms ease,
@@ -105,15 +105,15 @@ a {
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(17, 17, 17, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(124, 184, 255, 0.32);
   transform: translateY(-1px);
 }
 
 .stat-card {
   border: 1px solid var(--border);
   border-radius: 1rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(248, 241, 232, 0.88));
+  background: linear-gradient(180deg, rgba(24, 32, 46, 0.98), rgba(18, 24, 36, 0.98));
   padding: 0.8rem 0.9rem;
 }
 
@@ -137,7 +137,7 @@ a {
 .hero-card {
   border: 1px solid var(--border);
   border-radius: 1.6rem;
-  background: var(--panel);
+  background: linear-gradient(180deg, rgba(20, 27, 41, 0.98), rgba(16, 22, 34, 0.98));
   padding: 1.25rem;
 }
 
@@ -167,7 +167,7 @@ a {
 .media-badge {
   border-radius: 999px;
   background: var(--accent);
-  color: #f8f6f1;
+  color: #071019;
   padding: 0.22rem 0.52rem;
   font-size: 0.68rem;
   letter-spacing: 0.12em;
@@ -177,7 +177,7 @@ a {
 .meta-chip {
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(216, 235, 228, 0.7);
+  background: rgba(124, 184, 255, 0.12);
   padding: 0.26rem 0.55rem;
   font-size: 0.72rem;
   color: var(--accent);
@@ -191,7 +191,7 @@ a {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.03);
   padding: 0.75rem 0.85rem;
   text-align: left;
   transition:
@@ -202,12 +202,12 @@ a {
 
 .habit-check-row:hover {
   transform: translateY(-1px);
-  border-color: rgba(17, 17, 17, 0.16);
+  border-color: rgba(124, 184, 255, 0.24);
 }
 
 .habit-check-row-active {
-  border-color: rgba(17, 17, 17, 0.24);
-  background: #f7f4ed;
+  border-color: rgba(124, 184, 255, 0.34);
+  background: rgba(124, 184, 255, 0.1);
 }
 
 .habit-check-box {
@@ -219,7 +219,7 @@ a {
   border-radius: 0.45rem;
   border: 1px solid var(--foreground);
   background: var(--foreground);
-  color: #f8f6f1;
+  color: #071019;
   font-weight: 700;
   font-size: 0.85rem;
 }
@@ -245,20 +245,20 @@ a {
 }
 
 .habit-pill {
-  background: rgba(17, 17, 17, 0.06);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--muted);
 }
 
 .habit-pill-active {
   background: var(--foreground);
-  color: #f8f6f1;
+  color: #071019;
 }
 
 .field {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 0.95rem;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.04);
   padding: 0.72rem 0.85rem;
   color: var(--foreground);
   outline: none;
@@ -268,8 +268,8 @@ a {
 }
 
 .field:focus {
-  border-color: rgba(31, 79, 70, 0.35);
-  box-shadow: 0 0 0 4px rgba(31, 79, 70, 0.08);
+  border-color: rgba(124, 184, 255, 0.45);
+  box-shadow: 0 0 0 4px rgba(124, 184, 255, 0.12);
 }
 
 .primary-button,
@@ -293,20 +293,20 @@ a {
 .primary-button {
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #f8f6f1;
+  color: #071019;
 }
 
 .secondary-button,
 .filter-button {
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--foreground);
 }
 
 .filter-button-active {
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #f8f6f1;
+  color: #071019;
 }
 
 .habit-toggle-pill {
@@ -317,7 +317,7 @@ a {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 0.95rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.04);
   padding: 0.62rem 0.72rem;
   color: var(--foreground);
   font-size: 0.88rem;
@@ -338,12 +338,12 @@ a {
 
 .habit-toggle-pill:hover {
   transform: translateY(-1px);
-  border-color: rgba(31, 79, 70, 0.25);
+  border-color: rgba(124, 184, 255, 0.26);
 }
 
 .habit-toggle-pill-active {
-  background: rgba(216, 235, 228, 0.82);
-  border-color: rgba(31, 79, 70, 0.32);
+  background: rgba(124, 184, 255, 0.1);
+  border-color: rgba(124, 184, 255, 0.34);
 }
 
 .habit-add-button {
@@ -354,7 +354,7 @@ a {
   height: 2rem;
   border-radius: 999px;
   border: 1px solid var(--accent);
-  background: rgba(31, 79, 70, 0.08);
+  background: rgba(124, 184, 255, 0.08);
   color: var(--accent);
   font-size: 1.2rem;
   line-height: 1;
@@ -365,7 +365,7 @@ a {
 
 .habit-add-button:hover {
   transform: translateY(-1px);
-  background: rgba(31, 79, 70, 0.16);
+  background: rgba(124, 184, 255, 0.16);
 }
 
 .habit-inline-link {
@@ -387,8 +387,8 @@ a {
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 0.3rem;
-  border: 1px solid rgba(31, 79, 70, 0.35);
-  background: rgba(31, 79, 70, 0.08);
+  border: 1px solid rgba(124, 184, 255, 0.35);
+  background: rgba(124, 184, 255, 0.08);
   color: var(--accent);
   font-size: 0.75rem;
   flex: 0 0 auto;
@@ -399,7 +399,7 @@ a {
   overflow: hidden;
   height: 0.55rem;
   border-radius: 999px;
-  background: rgba(31, 79, 70, 0.12);
+  background: rgba(124, 184, 255, 0.12);
 }
 
 .habit-bar-fill {

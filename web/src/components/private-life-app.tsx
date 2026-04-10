@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { loadEntries, saveEntries } from "@/lib/persistence";
 import {
   entrySectionLabels,
@@ -86,6 +86,14 @@ function formatDate(date: string) {
   return new Intl.DateTimeFormat("es-AR", {
     day: "2-digit",
     month: "short",
+    year: "numeric",
+  }).format(new Date(`${date}T12:00:00`));
+}
+
+function formatNumericDate(date: string) {
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
   }).format(new Date(`${date}T12:00:00`));
 }
@@ -322,6 +330,8 @@ export function PrivateLifeApp() {
   const [habitViewMode, setHabitViewMode] = useState<HabitViewMode>("checklist");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [importMessage, setImportMessage] = useState<string>("");
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const deferredQuery = useDeferredValue(searchQuery);
 
   useEffect(() => {
@@ -713,6 +723,39 @@ export function PrivateLifeApp() {
     setIsHabitComposerOpen(false);
   }
 
+  function openImportPicker() {
+    importInputRef.current?.click();
+  }
+
+  function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const payload = JSON.parse(String(reader.result ?? "{}")) as { entries?: LifeEntry[] };
+        if (!Array.isArray(payload.entries)) {
+          throw new Error("Archivo invalido");
+        }
+        setEntries(sortEntries(payload.entries));
+        setImportMessage(`${payload.entries.length} entradas importadas.`);
+        setActiveView("library");
+      } catch {
+        setImportMessage("No pude importar ese JSON.");
+      } finally {
+        event.target.value = "";
+      }
+    };
+    reader.onerror = () => {
+      setImportMessage("No pude leer ese archivo.");
+      event.target.value = "";
+    };
+    reader.readAsText(file);
+  }
+
   const currentSectionOptions = sectionOptionsByType[form.type];
 
   if (!isHydrated) {
@@ -733,17 +776,31 @@ export function PrivateLifeApp() {
     <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-5 lg:px-6">
       <div className="grid gap-3 xl:grid-cols-[230px_minmax(0,1fr)]">
         <aside className="rounded-[1.4rem] border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)]">
-          <div className="border-b border-border pb-4">
-            <p className="section-kicker">private life</p>
-            <h1 className="mt-2 text-[1.85rem] font-medium tracking-[-0.05em] text-foreground">
-              Archivo vivo.
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              Menos dashboard y mas secciones utiles.
-            </p>
-          </div>
+            <div className="border-b border-border pb-4">
+              <p className="section-kicker">private life</p>
+              <h1 className="mt-2 text-[1.85rem] font-medium tracking-[-0.05em] text-foreground">
+                Archivo vivo.
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                Menos dashboard y mas secciones utiles.
+              </p>
+            </div>
 
-          <nav className="mt-5 grid gap-1.5 text-sm">
+            <div className="mt-5 grid gap-2">
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json"
+                onChange={handleImportFile}
+                className="hidden"
+              />
+              <button type="button" onClick={openImportPicker} className="primary-button justify-center">
+                Importar JSON
+              </button>
+              {importMessage ? <p className="text-xs leading-5 text-muted">{importMessage}</p> : null}
+            </div>
+
+            <nav className="mt-5 grid gap-1.5 text-sm">
             {[
               ["habits", "Habitos"],
               ["library", "Biblioteca"],
@@ -772,7 +829,7 @@ export function PrivateLifeApp() {
         </aside>
 
         <section className="rounded-[1.4rem] border border-border bg-surface px-4 py-5 sm:px-5 sm:py-5">
-          {activeView === "habits" ? (
+            {activeView === "habits" ? (
             <div className="space-y-5">
               <ViewHeader
                 title="Habitos diarios"
@@ -788,18 +845,19 @@ export function PrivateLifeApp() {
                         Volver
                       </button>
                     ) : null}
-                    <label className="grid gap-2 text-sm">
-                      <span className="font-medium text-foreground">Fecha</span>
-                      <input
-                        type="date"
-                        value={habitDate}
-                        onChange={(event) => setHabitDate(event.target.value)}
-                        className="field min-w-40"
-                      />
-                    </label>
-                  </div>
-                }
-              />
+                      <label className="grid gap-2 text-sm">
+                        <span className="font-medium text-foreground">Fecha</span>
+                        <input
+                          type="date"
+                          value={habitDate}
+                          onChange={(event) => setHabitDate(event.target.value)}
+                          className="field min-w-40"
+                        />
+                        <span className="text-xs text-muted">{formatNumericDate(habitDate)}</span>
+                      </label>
+                    </div>
+                  }
+                />
 
               {habitViewMode === "checklist" ? (
                 <div className="space-y-4">
@@ -1207,15 +1265,16 @@ export function PrivateLifeApp() {
                       ))}
                     </select>
                   </label>
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium text-foreground">Fecha</span>
-                    <input
-                      type="date"
-                      value={form.date}
-                      onChange={(event) => updateForm("date", event.target.value)}
-                      className="field"
-                    />
-                  </label>
+                    <label className="grid gap-2 text-sm">
+                      <span className="font-medium text-foreground">Fecha</span>
+                      <input
+                        type="date"
+                        value={form.date}
+                        onChange={(event) => updateForm("date", event.target.value)}
+                        className="field"
+                      />
+                      <span className="text-xs text-muted">{formatNumericDate(form.date)}</span>
+                    </label>
                   <label className="grid gap-2 text-sm">
                     <span className="font-medium text-foreground">Etiquetas</span>
                     <input
