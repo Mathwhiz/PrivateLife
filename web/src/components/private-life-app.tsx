@@ -90,14 +90,6 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T12:00:00`));
 }
 
-function formatNumericDate(date: string) {
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(`${date}T12:00:00`));
-}
-
 function normalizeSection(entry: LifeEntry): EntrySection {
   if (entry.section) {
     return entry.section;
@@ -853,7 +845,6 @@ export function PrivateLifeApp() {
                           onChange={(event) => setHabitDate(event.target.value)}
                           className="field min-w-40"
                         />
-                        <span className="text-xs text-muted">{formatNumericDate(habitDate)}</span>
                       </label>
                     </div>
                   }
@@ -1273,7 +1264,6 @@ export function PrivateLifeApp() {
                         onChange={(event) => updateForm("date", event.target.value)}
                         className="field"
                       />
-                      <span className="text-xs text-muted">{formatNumericDate(form.date)}</span>
                     </label>
                   <label className="grid gap-2 text-sm">
                     <span className="font-medium text-foreground">Etiquetas</span>
