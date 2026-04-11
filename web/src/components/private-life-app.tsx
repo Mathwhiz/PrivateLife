@@ -39,6 +39,54 @@ const writingSections: EntrySection[] = ["philosophy", "thought", "anecdote"];
 
 type AppView = "capture" | "habits" | "library" | "writings" | "milestones" | "archive" | "ajustes";
 
+// ─── App config (persisted in localStorage) ──────────────────────
+
+const CONFIG_KEY = "private-life.config.v1";
+
+type SidebarItemConfig = { view: AppView; label: string; visible: boolean };
+type MediaTypeConfig = { id: string; label: string; visible: boolean };
+type AppConfig = { sidebar: SidebarItemConfig[]; mediaTypes: MediaTypeConfig[] };
+
+const defaultAppConfig: AppConfig = {
+  sidebar: [
+    { view: "habits",     label: "Habitos",       visible: true },
+    { view: "library",    label: "Biblioteca",     visible: true },
+    { view: "writings",   label: "Textos",         visible: true },
+    { view: "milestones", label: "Hitos",          visible: true },
+    { view: "archive",    label: "Archivo",        visible: true },
+    { view: "capture",    label: "Nueva entrada",  visible: true },
+    { view: "ajustes",    label: "Ajustes",        visible: true },
+  ],
+  mediaTypes: [
+    { id: "movie",  label: "Pelicula", visible: true },
+    { id: "series", label: "Serie",    visible: true },
+    { id: "book",   label: "Libro",    visible: true },
+    { id: "anime",  label: "Anime",    visible: true },
+    { id: "manga",  label: "Manga",    visible: true },
+  ],
+};
+
+function loadConfig(): AppConfig {
+  if (typeof window === "undefined") return defaultAppConfig;
+  try {
+    const stored = localStorage.getItem(CONFIG_KEY);
+    if (!stored) return defaultAppConfig;
+    const parsed = JSON.parse(stored) as Partial<AppConfig>;
+    return {
+      sidebar: defaultAppConfig.sidebar.map((def) => {
+        const s = parsed.sidebar?.find((x) => x.view === def.view);
+        return s ? { ...def, ...s } : def;
+      }),
+      mediaTypes: defaultAppConfig.mediaTypes.map((def) => {
+        const m = parsed.mediaTypes?.find((x) => x.id === def.id);
+        return m ? { ...def, ...m } : def;
+      }),
+    };
+  } catch {
+    return defaultAppConfig;
+  }
+}
+
 type FormState = {
   type: EntryType;
   section: EntrySection;
@@ -391,12 +439,14 @@ function MediaEditorForm({
   onSubmit,
   onCancel,
   onDelete,
+  typeConfig,
 }: {
   form: MediaFormState;
   onChange: (updates: Partial<MediaFormState>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
   onDelete?: () => void;
+  typeConfig?: MediaTypeConfig[];
 }) {
   const isNew = !form.id;
 
@@ -426,9 +476,9 @@ function MediaEditorForm({
             onChange={(e) => onChange({ type: e.target.value as EntryType })}
             className="field"
           >
-            {mediaTypes.map((t) => (
-              <option key={t} value={t}>
-                {entryTypeLabels[t]}
+            {(typeConfig ?? mediaTypes.map((t) => ({ id: t, label: entryTypeLabels[t], visible: true }))).map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
               </option>
             ))}
           </select>
@@ -532,6 +582,7 @@ export function PrivateLifeApp() {
   const [ratingFilter, setRatingFilter] = useState<"all" | "8" | "9" | "10">("all");
   const [librarySearch, setLibrarySearch] = useState("");
   const [librarySort, setLibrarySort] = useState<"date-desc" | "date-asc" | "rating-desc" | "rating-asc">("date-desc");
+  const [appConfig, setAppConfig] = useState<AppConfig>(() => loadConfig());
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string>("");
@@ -585,6 +636,13 @@ export function PrivateLifeApp() {
       setSyncSource(result.source);
     });
   }, [entries, isHydrated]);
+
+  // 4. Guardar config en localStorage cada vez que cambia
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(appConfig));
+    }
+  }, [appConfig]);
 
   const normalizedEntries = useMemo(
     () =>
@@ -1180,24 +1238,18 @@ export function PrivateLifeApp() {
             </div>
 
             <nav className="mt-5 grid gap-1.5 text-sm">
-            {[
-              ["habits", "Habitos"],
-              ["library", "Biblioteca"],
-              ["writings", "Textos"],
-              ["milestones", "Hitos JW"],
-              ["archive", "Archivo"],
-              ["capture", "Nueva entrada"],
-              ["ajustes", "Ajustes"],
-            ].map(([view, label]) => (
-              <button
-                key={view}
-                type="button"
-                onClick={() => setActiveView(view as AppView)}
-                className={activeView === view ? "nav-link nav-link-active" : "nav-link"}
-              >
-                {label}
-              </button>
-            ))}
+            {appConfig.sidebar
+              .filter((item) => item.visible)
+              .map(({ view, label }) => (
+                <button
+                  key={view}
+                  type="button"
+                  onClick={() => setActiveView(view)}
+                  className={activeView === view ? "nav-link nav-link-active" : "nav-link"}
+                >
+                  {label}
+                </button>
+              ))}
           </nav>
 
           <div className="mt-auto pt-4 border-t border-border">
@@ -1469,16 +1521,18 @@ export function PrivateLifeApp() {
                     >
                       Todo
                     </button>
-                    {mediaTypes.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setLibraryFilter(type)}
-                        className={libraryFilter === type ? "filter-button-active" : "filter-button"}
-                      >
-                        {entryTypeLabels[type]}
-                      </button>
-                    ))}
+                    {appConfig.mediaTypes
+                      .filter((mt) => mt.visible)
+                      .map(({ id, label }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setLibraryFilter(id as EntryType)}
+                          className={libraryFilter === id ? "filter-button-active" : "filter-button"}
+                        >
+                          {label}
+                        </button>
+                      ))}
                   </div>
                 }
               />
@@ -1499,6 +1553,7 @@ export function PrivateLifeApp() {
                         }
                       : undefined
                   }
+                  typeConfig={appConfig.mediaTypes}
                 />
               ) : null}
 
@@ -1853,6 +1908,115 @@ export function PrivateLifeApp() {
                     : "Modo local — los datos viven en este navegador."}
                 </p>
                 <p className="mt-1 text-xs text-muted">{entries.length} entradas en total.</p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {/* Config: Menu lateral */}
+                <div className="rounded-xl border border-border bg-panel px-4 py-5">
+                  <div className="flex items-center justify-between">
+                    <p className="section-kicker">Menu lateral</p>
+                    <button
+                      type="button"
+                      className="text-xs text-muted transition-colors hover:text-foreground"
+                      onClick={() => setAppConfig((prev) => ({ ...prev, sidebar: defaultAppConfig.sidebar }))}
+                    >
+                      Restaurar
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted">Renombrá o ocultá secciones del menú.</p>
+                  <div className="mt-4 grid gap-2">
+                    {appConfig.sidebar.map((item, i) => (
+                      <div key={item.view} className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={item.view === "ajustes"}
+                          onClick={() =>
+                            setAppConfig((prev) => ({
+                              ...prev,
+                              sidebar: prev.sidebar.map((s, j) =>
+                                j === i ? { ...s, visible: !s.visible } : s,
+                              ),
+                            }))
+                          }
+                          className={`flex-shrink-0 w-7 h-7 rounded-md border text-xs font-medium transition-colors ${
+                            item.visible
+                              ? "border-sage/40 bg-sage/10 text-sage"
+                              : "border-border bg-transparent text-muted"
+                          } ${item.view === "ajustes" ? "opacity-30 cursor-not-allowed" : ""}`}
+                          title={item.view === "ajustes" ? "Ajustes siempre visible" : item.visible ? "Ocultar" : "Mostrar"}
+                        >
+                          {item.visible ? "✓" : "—"}
+                        </button>
+                        <input
+                          type="text"
+                          value={item.label}
+                          onChange={(e) =>
+                            setAppConfig((prev) => ({
+                              ...prev,
+                              sidebar: prev.sidebar.map((s, j) =>
+                                j === i ? { ...s, label: e.target.value } : s,
+                              ),
+                            }))
+                          }
+                          className="field text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Config: Tipos de biblioteca */}
+                <div className="rounded-xl border border-border bg-panel px-4 py-5">
+                  <div className="flex items-center justify-between">
+                    <p className="section-kicker">Tipos de biblioteca</p>
+                    <button
+                      type="button"
+                      className="text-xs text-muted transition-colors hover:text-foreground"
+                      onClick={() => setAppConfig((prev) => ({ ...prev, mediaTypes: defaultAppConfig.mediaTypes }))}
+                    >
+                      Restaurar
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted">Renombrá o desactivá categorías de la biblioteca.</p>
+                  <div className="mt-4 grid gap-2">
+                    {appConfig.mediaTypes.map((mt, i) => (
+                      <div key={mt.id} className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAppConfig((prev) => ({
+                              ...prev,
+                              mediaTypes: prev.mediaTypes.map((m, j) =>
+                                j === i ? { ...m, visible: !m.visible } : m,
+                              ),
+                            }))
+                          }
+                          className={`flex-shrink-0 w-7 h-7 rounded-md border text-xs font-medium transition-colors ${
+                            mt.visible
+                              ? "border-sage/40 bg-sage/10 text-sage"
+                              : "border-border bg-transparent text-muted"
+                          }`}
+                          title={mt.visible ? "Ocultar" : "Mostrar"}
+                        >
+                          {mt.visible ? "✓" : "—"}
+                        </button>
+                        <input
+                          type="text"
+                          value={mt.label}
+                          onChange={(e) =>
+                            setAppConfig((prev) => ({
+                              ...prev,
+                              mediaTypes: prev.mediaTypes.map((m, j) =>
+                                j === i ? { ...m, label: e.target.value } : m,
+                              ),
+                            }))
+                          }
+                          className="field text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="rounded-xl border border-border bg-panel px-4 py-5">
