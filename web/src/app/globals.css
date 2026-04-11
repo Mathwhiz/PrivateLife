@@ -513,6 +513,17 @@ a {
   opacity: 0.72;
 }
 
+/* ─── Login ──────────────────────────────── */
+
+.login-checkbox {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* ─── Sidebar toggle ─────────────────────── */
 
 .sidebar-toggle {

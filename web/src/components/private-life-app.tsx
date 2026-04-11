@@ -2,6 +2,8 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { loadEntries, saveEntries } from "@/lib/persistence";
+import { getSession, signOut as authSignOut, onAuthStateChange } from "@/lib/auth";
+import { LoginScreen } from "@/components/login-screen";
 import {
   entrySectionLabels,
   entryTypeLabels,
@@ -504,6 +506,7 @@ function MediaEditorForm({
 }
 
 export function PrivateLifeApp() {
+  const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">("checking");
   const [entries, setEntries] = useState<LifeEntry[]>(initialEntries);
   const [syncSource, setSyncSource] = useState<"supabase" | "local">("local");
   const [isHydrated, setIsHydrated] = useState(false);
@@ -528,13 +531,31 @@ export function PrivateLifeApp() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const deferredQuery = useDeferredValue(searchQuery);
 
+  // 1. Verificar sesión al montar y escuchar cambios de auth
   useEffect(() => {
+    void getSession().then((session) => {
+      setAuthState(session ? "authenticated" : "unauthenticated");
+    });
+
+    const unsubscribe = onAuthStateChange((session) => {
+      if (!session) {
+        setAuthState("unauthenticated");
+        setIsHydrated(false);
+        setEntries(initialEntries);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // 2. Cargar entradas solo cuando el usuario esté autenticado
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+
     let cancelled = false;
 
     void loadEntries().then((result) => {
-      if (cancelled) {
-        return;
-      }
+      if (cancelled) return;
 
       if (result?.entries?.length) {
         setEntries(result.entries);
@@ -547,12 +568,11 @@ export function PrivateLifeApp() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authState]);
 
+  // 3. Guardar entradas cada vez que cambian
   useEffect(() => {
-    if (!isHydrated) {
-      return;
-    }
+    if (!isHydrated) return;
 
     void saveEntries(entries).then((result) => {
       setSyncSource(result.source);
@@ -1081,6 +1101,21 @@ export function PrivateLifeApp() {
   }
 
   const currentSectionOptions = sectionOptionsByType[form.type];
+
+  if (authState === "checking") {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-[1520px] items-center justify-center px-4 py-10">
+        <div className="loading-card">
+          <p className="section-kicker">private life</p>
+          <h1 className="mt-3 text-lg font-medium text-foreground">Verificando sesión...</h1>
+        </div>
+      </main>
+    );
+  }
+
+  if (authState === "unauthenticated") {
+    return <LoginScreen onLogin={() => setAuthState("authenticated")} />;
+  }
 
   if (!isHydrated) {
     return (
@@ -1772,6 +1807,20 @@ export function PrivateLifeApp() {
                     : "Modo local — los datos viven en este navegador."}
                 </p>
                 <p className="mt-1 text-xs text-muted">{entries.length} entradas en total.</p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-panel px-4 py-5">
+                <p className="section-kicker">Sesion</p>
+                <p className="mt-2 text-sm text-muted">
+                  Cerrar sesion desconecta este dispositivo. Los datos en la nube no se borran.
+                </p>
+                <button
+                  type="button"
+                  className="mt-4 danger-button"
+                  onClick={() => void authSignOut()}
+                >
+                  Cerrar sesion
+                </button>
               </div>
             </div>
           ) : null}
