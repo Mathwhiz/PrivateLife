@@ -4,6 +4,8 @@ export type EntryType =
   | "movie"
   | "book"
   | "series"
+  | "anime"
+  | "manga"
   | "note";
 
 export type EntrySection =
@@ -14,7 +16,9 @@ export type EntrySection =
   | "anecdote"
   | "movie"
   | "book"
-  | "series";
+  | "series"
+  | "anime"
+  | "manga";
 
 export type LifeEntry = {
   id: string;
@@ -33,6 +37,8 @@ export const entryTypeLabels: Record<EntryType, string> = {
   movie: "Pelicula",
   book: "Libro",
   series: "Serie",
+  anime: "Anime",
+  manga: "Manga",
   note: "Nota",
 };
 
@@ -45,6 +51,8 @@ export const entrySectionLabels: Record<EntrySection, string> = {
   movie: "Pelicula",
   book: "Libro",
   series: "Serie",
+  anime: "Anime",
+  manga: "Manga",
 };
 
 export const sectionOptionsByType: Record<EntryType, EntrySection[]> = {
@@ -53,6 +61,8 @@ export const sectionOptionsByType: Record<EntryType, EntrySection[]> = {
   movie: ["movie"],
   book: ["book"],
   series: ["series"],
+  anime: ["anime"],
+  manga: ["manga"],
   note: ["philosophy", "thought", "general"],
 };
 
