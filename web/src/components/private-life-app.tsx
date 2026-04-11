@@ -33,7 +33,7 @@ const entryTypes: EntryType[] = ["memory", "habit", "movie", "book", "series", "
 const mediaTypes: EntryType[] = ["movie", "series", "book"];
 const writingSections: EntrySection[] = ["philosophy", "thought", "anecdote"];
 
-type AppView = "capture" | "habits" | "library" | "writings" | "milestones" | "archive";
+type AppView = "capture" | "habits" | "library" | "writings" | "milestones" | "archive" | "ajustes";
 
 type FormState = {
   type: EntryType;
@@ -1036,6 +1036,17 @@ export function PrivateLifeApp() {
     setMediaForm(null);
   }
 
+  function handleExport() {
+    const payload = JSON.stringify({ entries, exportedAt: new Date().toISOString() }, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `private-life-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function openImportPicker() {
     importInputRef.current?.click();
   }
@@ -1106,20 +1117,6 @@ export function PrivateLifeApp() {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-2">
-              <input
-                ref={importInputRef}
-                type="file"
-                accept="application/json"
-                onChange={handleImportFile}
-                className="hidden"
-              />
-              <button type="button" onClick={openImportPicker} className="secondary-button w-full justify-center">
-                Importar JSON
-              </button>
-              {importMessage ? <p className="text-xs leading-5 text-muted">{importMessage}</p> : null}
-            </div>
-
             <nav className="mt-5 grid gap-1.5 text-sm">
             {[
               ["habits", "Habitos"],
@@ -1128,6 +1125,7 @@ export function PrivateLifeApp() {
               ["milestones", "Hitos JW"],
               ["archive", "Archivo"],
               ["capture", "Nueva entrada"],
+              ["ajustes", "Ajustes"],
             ].map(([view, label]) => (
               <button
                 key={view}
@@ -1716,6 +1714,65 @@ export function PrivateLifeApp() {
                   </button>
                 </div>
               </form>
+            </div>
+          ) : null}
+
+          {activeView === "ajustes" ? (
+            <div className="space-y-5">
+              <ViewHeader
+                title="Ajustes"
+                description="Gestion de datos y configuracion de la app."
+              />
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-panel px-4 py-5">
+                  <p className="section-kicker">Exportar datos</p>
+                  <p className="mt-2 text-sm leading-6 text-muted">
+                    Descarga todas tus entradas como archivo JSON. Guardalo como backup manual.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-4 secondary-button"
+                    onClick={handleExport}
+                  >
+                    Exportar JSON
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-border bg-panel px-4 py-5">
+                  <p className="section-kicker">Importar datos</p>
+                  <p className="mt-2 text-sm leading-6 text-muted">
+                    Carga un archivo JSON exportado previamente. Reemplaza las entradas actuales.
+                  </p>
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept="application/json"
+                    onChange={handleImportFile}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    className="mt-4 secondary-button"
+                    onClick={openImportPicker}
+                  >
+                    Importar JSON
+                  </button>
+                  {importMessage ? (
+                    <p className="mt-2 text-xs text-muted">{importMessage}</p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-panel px-4 py-5">
+                <p className="section-kicker">Sincronizacion</p>
+                <p className="mt-2 text-sm text-foreground">
+                  {syncSource === "supabase"
+                    ? "Supabase activo — los datos se sincronizan en la nube."
+                    : "Modo local — los datos viven en este navegador."}
+                </p>
+                <p className="mt-1 text-xs text-muted">{entries.length} entradas en total.</p>
+              </div>
             </div>
           ) : null}
         </section>
