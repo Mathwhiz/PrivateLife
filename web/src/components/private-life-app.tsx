@@ -293,14 +293,14 @@ function MediaCard({
     ? "Infancia"
     : entry.tags.includes("approx-date")
       ? "Fecha aprox"
-      : "Fecha exacta";
+      : null;
 
   return (
     <article className="rounded-xl border border-border bg-panel px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1.5">
           <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
-            {entryTypeLabels[entry.type]} · {formatDate(entry.date)} · {exactness}
+            {entryTypeLabels[entry.type]} · {formatDate(entry.date)}{exactness ? ` · ${exactness}` : ""}
           </p>
           <h3 className="text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
         </div>
@@ -518,7 +518,10 @@ export function PrivateLifeApp() {
   const [isHabitComposerOpen, setIsHabitComposerOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<string | null>(null);
   const [habitViewMode, setHabitViewMode] = useState<HabitViewMode>("checklist");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mediaForm, setMediaForm] = useState<MediaFormState | null>(null);
+  const [ratingFilter, setRatingFilter] = useState<"all" | "8" | "9" | "10">("all");
+  const [librarySearch, setLibrarySearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string>("");
@@ -727,12 +730,21 @@ export function PrivateLifeApp() {
         ? mediaEntries
         : mediaEntries.filter((entry) => entry.type === libraryFilter);
 
+    const searchNorm = librarySearch.trim().toLowerCase();
+
     return byType.filter((entry) => {
       const matchesGenre = genreFilter === "all-genres" || entry.tags.includes(genreFilter);
       const matchesTag = activeTag === null || entry.tags.includes(activeTag);
-      return matchesGenre && matchesTag;
+      const matchesSearch =
+        searchNorm === "" || entry.title.toLowerCase().includes(searchNorm);
+      const matchesRating =
+        ratingFilter === "all" ||
+        (entry.rating !== undefined &&
+          entry.rating !== null &&
+          parseFloat(`${entry.rating}`) >= parseFloat(ratingFilter));
+      return matchesGenre && matchesTag && matchesSearch && matchesRating;
     });
-  }, [activeTag, genreFilter, libraryFilter, mediaEntries]);
+  }, [activeTag, genreFilter, libraryFilter, librarySearch, mediaEntries, ratingFilter]);
 
   const writingEntries = useMemo(
     () =>
@@ -1075,13 +1087,23 @@ export function PrivateLifeApp() {
 
   return (
     <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
-      <div className="grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="flex flex-col rounded-xl border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)]">
-            <div className="border-b border-border pb-4">
-              <p className="section-kicker">private life</p>
-              <h1 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">
-                Archivo vivo.
-              </h1>
+      <div className={`grid gap-3 ${sidebarOpen ? "xl:grid-cols-[220px_minmax(0,1fr)]" : ""}`}>
+        <aside className={`flex flex-col rounded-xl border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)] ${sidebarOpen ? "" : "hidden"}`}>
+            <div className="flex items-start justify-between border-b border-border pb-4">
+              <div>
+                <p className="section-kicker">private life</p>
+                <h1 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">
+                  Archivo vivo.
+                </h1>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                className="sidebar-toggle mt-0.5"
+                title="Cerrar menu"
+              >
+                ‹
+              </button>
             </div>
 
             <div className="mt-5 grid gap-2">
@@ -1126,6 +1148,19 @@ export function PrivateLifeApp() {
         </aside>
 
         <section className="rounded-xl border border-border bg-surface px-5 py-5 sm:px-6 sm:py-6">
+            {!sidebarOpen ? (
+              <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="sidebar-toggle"
+                  title="Abrir menu"
+                >
+                  ≡
+                </button>
+                <span className="section-kicker">private life</span>
+              </div>
+            ) : null}
             {activeView === "habits" ? (
             <div className="space-y-5">
               <ViewHeader
@@ -1407,24 +1442,50 @@ export function PrivateLifeApp() {
                 />
               ) : null}
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setGenreFilter("all-genres")}
-                  className={genreFilter === "all-genres" ? "filter-button-active" : "filter-button"}
-                >
-                  Todos los generos
-                </button>
-                {mediaGenres.slice(0, 24).map((genre) => (
-                  <button
-                    key={genre}
-                    type="button"
-                    onClick={() => setGenreFilter(genre)}
-                    className={genreFilter === genre ? "filter-button-active" : "filter-button"}
-                  >
-                    {genre}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="search"
+                    value={librarySearch}
+                    onChange={(e) => setLibrarySearch(e.target.value)}
+                    placeholder="Buscar por nombre..."
+                    className="field max-w-xs"
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["all", "8", "9", "10"] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRatingFilter(r)}
+                        className={ratingFilter === r ? "filter-button-active" : "filter-button"}
+                      >
+                        {r === "all" ? "Todas" : `${r}+`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {mediaGenres.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setGenreFilter("all-genres")}
+                      className={genreFilter === "all-genres" ? "filter-button-active" : "filter-button"}
+                    >
+                      Todos los generos
+                    </button>
+                    {mediaGenres.slice(0, 24).map((genre) => (
+                      <button
+                        key={genre}
+                        type="button"
+                        onClick={() => setGenreFilter(genre)}
+                        className={genreFilter === genre ? "filter-button-active" : "filter-button"}
+                      >
+                        {genre}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               {visibleMedia.length === 0 ? (
