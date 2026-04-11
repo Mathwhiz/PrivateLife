@@ -279,14 +279,38 @@ a {
 
 .media-badge {
   border-radius: 0.3rem;
-  background: var(--accent-soft);
-  color: var(--accent);
-  padding: 0.16rem 0.46rem;
+  border: 1px solid transparent;
+  padding: 0.18rem 0.5rem;
   font-size: 0.63rem;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   white-space: nowrap;
+  /* default: muted */
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  border-color: var(--border-mid);
+}
+
+/* rating 8 — amber */
+.media-badge-8 {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(200, 144, 90, 0.32);
+}
+
+/* rating 9 — sage green */
+.media-badge-9 {
+  background: rgba(106, 164, 126, 0.13);
+  color: var(--sage);
+  border-color: rgba(106, 164, 126, 0.28);
+}
+
+/* rating 10 / WOW — gold */
+.media-badge-10 {
+  background: rgba(200, 170, 90, 0.16);
+  color: var(--gold);
+  border-color: rgba(200, 170, 90, 0.35);
 }
 
 .meta-chip {

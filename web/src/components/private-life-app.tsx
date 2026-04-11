@@ -65,6 +65,16 @@ type HabitStats = {
 
 type HabitViewMode = "checklist" | "detail";
 
+type MediaFormState = {
+  id: string;
+  type: EntryType;
+  title: string;
+  content: string;
+  date: string;
+  rating: string;
+  tags: string;
+};
+
 const defaultType: EntryType = "memory";
 
 const defaultFormState = (): FormState => ({
@@ -82,6 +92,33 @@ const defaultHabitDraft = (): HabitDraft => ({
   content: "",
   tags: "",
 });
+
+function defaultMediaForm(type: EntryType = "movie"): MediaFormState {
+  return {
+    id: "",
+    type,
+    title: "",
+    content: "",
+    date: new Date().toISOString().slice(0, 10),
+    rating: "",
+    tags: "",
+  };
+}
+
+function entryToMediaForm(entry: LifeEntry): MediaFormState {
+  const cleanTags = entry.tags.filter(
+    (t) => !systemMediaTags.has(t) && !t.includes("import"),
+  );
+  return {
+    id: entry.id,
+    type: entry.type,
+    title: entry.title,
+    content: entry.content,
+    date: entry.date,
+    rating: entry.rating !== undefined && entry.rating !== null ? `${entry.rating}` : "",
+    tags: cleanTags.join(", "),
+  };
+}
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("es-AR", {
@@ -135,6 +172,20 @@ function getDisplayRating(entry: LifeEntry) {
     return `${entry.rating}/10`;
   }
   return getReactionBadge(entry);
+}
+
+function getRatingBadgeClass(entry: LifeEntry): string {
+  const raw = entry.rating;
+  if (raw !== undefined && raw !== null && `${raw}`.trim() !== "") {
+    const num = parseFloat(`${raw}`);
+    if (num >= 10) return "media-badge media-badge-10";
+    if (num >= 9) return "media-badge media-badge-9";
+    if (num >= 8) return "media-badge media-badge-8";
+    return "media-badge";
+  }
+  if (entry.tags.includes("wow")) return "media-badge media-badge-10";
+  if (entry.tags.includes("liked")) return "media-badge media-badge-8";
+  return "media-badge";
 }
 
 function compactMeta(entry: LifeEntry) {
@@ -226,8 +277,17 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-function MediaCard({ entry }: { entry: LifeEntry }) {
-  const rating = getDisplayRating(entry);
+function MediaCard({
+  entry,
+  onEdit,
+  onDelete,
+}: {
+  entry: LifeEntry;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const badgeClass = getRatingBadgeClass(entry);
+  const display = getDisplayRating(entry);
   const meta = compactMeta(entry);
   const exactness = entry.tags.includes("childhood")
     ? "Infancia"
@@ -238,13 +298,13 @@ function MediaCard({ entry }: { entry: LifeEntry }) {
   return (
     <article className="rounded-xl border border-border bg-panel px-4 py-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
             {entryTypeLabels[entry.type]} · {formatDate(entry.date)} · {exactness}
           </p>
           <h3 className="text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
         </div>
-        {rating ? <span className="media-badge">{rating}</span> : null}
+        {display ? <span className={badgeClass}>{display}</span> : null}
       </div>
       {meta.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -255,6 +315,14 @@ function MediaCard({ entry }: { entry: LifeEntry }) {
           ))}
         </div>
       ) : null}
+      <div className="mt-3 flex gap-1.5 border-t border-border pt-3">
+        <button type="button" className="habit-inline-link" onClick={onEdit}>
+          Editar
+        </button>
+        <button type="button" className="habit-inline-link" onClick={onDelete}>
+          Eliminar
+        </button>
+      </div>
     </article>
   );
 }
@@ -309,6 +377,132 @@ function ArchiveCard({
   );
 }
 
+function MediaEditorForm({
+  form,
+  onChange,
+  onSubmit,
+  onCancel,
+  onDelete,
+}: {
+  form: MediaFormState;
+  onChange: (updates: Partial<MediaFormState>) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  onDelete?: () => void;
+}) {
+  const isNew = !form.id;
+
+  return (
+    <form
+      className="grid gap-3 rounded-xl border border-border bg-panel px-4 py-4"
+      onSubmit={onSubmit}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-medium text-foreground">
+          {isNew ? "Nueva entrada" : "Editar entrada"}
+        </h3>
+        <button
+          type="button"
+          className="text-xs text-muted transition-colors hover:text-foreground"
+          onClick={onCancel}
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="grid gap-1.5 text-xs">
+          <span className="font-medium uppercase tracking-wide text-muted">Tipo</span>
+          <select
+            value={form.type}
+            onChange={(e) => onChange({ type: e.target.value as EntryType })}
+            className="field"
+          >
+            {mediaTypes.map((t) => (
+              <option key={t} value={t}>
+                {entryTypeLabels[t]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-xs">
+          <span className="font-medium uppercase tracking-wide text-muted">Fecha</span>
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => onChange({ date: e.target.value })}
+            className="field"
+          />
+        </label>
+        <label className="grid gap-1.5 text-xs">
+          <span className="font-medium uppercase tracking-wide text-muted">Rating (1–10)</span>
+          <input
+            type="number"
+            min="1"
+            max="10"
+            step="0.5"
+            value={form.rating}
+            onChange={(e) => onChange({ rating: e.target.value })}
+            placeholder="—"
+            className="field"
+          />
+        </label>
+        <label className="grid gap-1.5 text-xs">
+          <span className="font-medium uppercase tracking-wide text-muted">Tags</span>
+          <input
+            type="text"
+            value={form.tags}
+            onChange={(e) => onChange({ tags: e.target.value })}
+            placeholder="drama, favorita"
+            className="field"
+          />
+        </label>
+      </div>
+
+      <label className="grid gap-1.5 text-xs">
+        <span className="font-medium uppercase tracking-wide text-muted">Titulo</span>
+        <input
+          type="text"
+          value={form.title}
+          onChange={(e) => onChange({ title: e.target.value })}
+          placeholder="Titulo de la obra"
+          className="field"
+          autoFocus
+        />
+      </label>
+
+      <label className="grid gap-1.5 text-xs">
+        <span className="font-medium uppercase tracking-wide text-muted">Notas</span>
+        <textarea
+          value={form.content}
+          onChange={(e) => onChange({ content: e.target.value })}
+          placeholder="Contexto, impresiones, por que vale la pena recordarla."
+          rows={3}
+          className="field resize-y"
+        />
+      </label>
+
+      <div className="flex flex-wrap justify-between gap-2">
+        <div>
+          {!isNew && onDelete ? (
+            <button type="button" className="danger-button" onClick={onDelete}>
+              Eliminar
+            </button>
+          ) : null}
+        </div>
+        <div className="flex gap-2">
+          <button type="button" className="secondary-button" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button type="submit" className="primary-button">
+            {isNew ? "Agregar" : "Guardar"}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
 export function PrivateLifeApp() {
   const [entries, setEntries] = useState<LifeEntry[]>(initialEntries);
   const [syncSource, setSyncSource] = useState<"supabase" | "local">("local");
@@ -324,6 +518,7 @@ export function PrivateLifeApp() {
   const [isHabitComposerOpen, setIsHabitComposerOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<string | null>(null);
   const [habitViewMode, setHabitViewMode] = useState<HabitViewMode>("checklist");
+  const [mediaForm, setMediaForm] = useState<MediaFormState | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string>("");
@@ -783,6 +978,52 @@ export function PrivateLifeApp() {
     deleteHabit(habitDraft.originalTitle);
   }
 
+  function deleteEntry(id: string) {
+    setEntries((current) => current.filter((e) => e.id !== id));
+  }
+
+  function openMediaEditor(entry?: LifeEntry) {
+    if (entry) {
+      setMediaForm(entryToMediaForm(entry));
+    } else {
+      const type = libraryFilter === "all-media" ? "movie" : (libraryFilter as EntryType);
+      setMediaForm(defaultMediaForm(type));
+    }
+  }
+
+  function saveMediaForm(event: React.FormEvent) {
+    event.preventDefault();
+    if (!mediaForm || !mediaForm.title.trim()) return;
+
+    const isNew = !mediaForm.id;
+    const id = isNew
+      ? makeEntryId(mediaForm.type, mediaForm.date, mediaForm.title)
+      : mediaForm.id;
+
+    const parsedRating = mediaForm.rating.trim() !== "" ? mediaForm.rating.trim() : undefined;
+
+    const next: LifeEntry = {
+      id,
+      type: mediaForm.type,
+      section: mediaForm.type as EntrySection,
+      title: mediaForm.title.trim(),
+      content: mediaForm.content.trim(),
+      date: mediaForm.date,
+      tags: mediaForm.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+      ...(parsedRating !== undefined ? { rating: parsedRating } : {}),
+    };
+
+    if (isNew) {
+      setEntries((current) => [next, ...current]);
+    } else {
+      setEntries((current) => current.map((e) => (e.id === id ? next : e)));
+    }
+    setMediaForm(null);
+  }
+
   function openImportPicker() {
     importInputRef.current?.click();
   }
@@ -1118,7 +1359,14 @@ export function PrivateLifeApp() {
                 title="Biblioteca"
                 description="Peliculas, series y libros con genero filtrable, fecha clara y tu nota arriba."
                 aside={
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openMediaEditor()}
+                      className="primary-button"
+                    >
+                      + Nueva
+                    </button>
                     <button
                       type="button"
                       onClick={() => setLibraryFilter("all-media")}
@@ -1139,6 +1387,25 @@ export function PrivateLifeApp() {
                   </div>
                 }
               />
+
+              {mediaForm !== null ? (
+                <MediaEditorForm
+                  form={mediaForm}
+                  onChange={(updates) =>
+                    setMediaForm((current) => (current ? { ...current, ...updates } : current))
+                  }
+                  onSubmit={saveMediaForm}
+                  onCancel={() => setMediaForm(null)}
+                  onDelete={
+                    mediaForm.id
+                      ? () => {
+                          deleteEntry(mediaForm.id);
+                          setMediaForm(null);
+                        }
+                      : undefined
+                  }
+                />
+              ) : null}
 
               <div className="flex flex-wrap gap-2">
                 <button
@@ -1165,7 +1432,12 @@ export function PrivateLifeApp() {
               ) : (
                 <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
                   {visibleMedia.map((entry) => (
-                    <MediaCard key={entry.id} entry={entry} />
+                    <MediaCard
+                      key={entry.id}
+                      entry={entry}
+                      onEdit={() => openMediaEditor(entry)}
+                      onDelete={() => deleteEntry(entry.id)}
+                    />
                   ))}
                 </div>
               )}
