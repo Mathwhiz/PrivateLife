@@ -21,6 +21,8 @@ const systemMediaTags = new Set([
   "movie",
   "series",
   "book",
+  "anime",
+  "manga",
   "imported",
   "imdb",
   "life-xlsx",
@@ -31,8 +33,8 @@ const systemMediaTags = new Set([
   "childhood",
 ]);
 
-const entryTypes: EntryType[] = ["memory", "habit", "movie", "book", "series", "note"];
-const mediaTypes: EntryType[] = ["movie", "series", "book"];
+const entryTypes: EntryType[] = ["memory", "habit", "movie", "book", "series", "anime", "manga", "note"];
+const mediaTypes: EntryType[] = ["movie", "series", "book", "anime", "manga"];
 const writingSections: EntrySection[] = ["philosophy", "thought", "anecdote"];
 
 type AppView = "capture" | "habits" | "library" | "writings" | "milestones" | "archive" | "ajustes";
@@ -144,6 +146,10 @@ function normalizeSection(entry: LifeEntry): EntrySection {
       return "book";
     case "series":
       return "series";
+    case "anime":
+      return "anime";
+    case "manga":
+      return "manga";
     case "memory":
       return "anecdote";
     case "note":
@@ -525,6 +531,7 @@ export function PrivateLifeApp() {
   const [mediaForm, setMediaForm] = useState<MediaFormState | null>(null);
   const [ratingFilter, setRatingFilter] = useState<"all" | "8" | "9" | "10">("all");
   const [librarySearch, setLibrarySearch] = useState("");
+  const [librarySort, setLibrarySort] = useState<"date-desc" | "date-asc" | "rating-desc" | "rating-asc">("date-desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string>("");
@@ -752,7 +759,7 @@ export function PrivateLifeApp() {
 
     const searchNorm = librarySearch.trim().toLowerCase();
 
-    return byType.filter((entry) => {
+    const filtered = byType.filter((entry) => {
       const matchesGenre = genreFilter === "all-genres" || entry.tags.includes(genreFilter);
       const matchesTag = activeTag === null || entry.tags.includes(activeTag);
       const matchesSearch =
@@ -764,7 +771,27 @@ export function PrivateLifeApp() {
           parseFloat(`${entry.rating}`) >= parseFloat(ratingFilter));
       return matchesGenre && matchesTag && matchesSearch && matchesRating;
     });
-  }, [activeTag, genreFilter, libraryFilter, librarySearch, mediaEntries, ratingFilter]);
+
+    return [...filtered].sort((a, b) => {
+      switch (librarySort) {
+        case "date-asc":
+          return a.date.localeCompare(b.date);
+        case "rating-desc": {
+          const ra = parseFloat(`${a.rating ?? 0}`);
+          const rb = parseFloat(`${b.rating ?? 0}`);
+          return rb - ra || b.date.localeCompare(a.date);
+        }
+        case "rating-asc": {
+          const ra = parseFloat(`${a.rating ?? 0}`);
+          const rb = parseFloat(`${b.rating ?? 0}`);
+          return ra - rb || b.date.localeCompare(a.date);
+        }
+        case "date-desc":
+        default:
+          return b.date.localeCompare(a.date);
+      }
+    });
+  }, [activeTag, genreFilter, libraryFilter, librarySearch, librarySort, mediaEntries, ratingFilter]);
 
   const writingEntries = useMemo(
     () =>
@@ -1493,6 +1520,25 @@ export function PrivateLifeApp() {
                         className={ratingFilter === r ? "filter-button-active" : "filter-button"}
                       >
                         {r === "all" ? "Todas" : `${r}+`}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(
+                      [
+                        ["date-desc", "Más reciente"],
+                        ["date-asc", "Más antigua"],
+                        ["rating-desc", "Nota ↓"],
+                        ["rating-asc", "Nota ↑"],
+                      ] as const
+                    ).map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setLibrarySort(val)}
+                        className={librarySort === val ? "filter-button-active" : "filter-button"}
+                      >
+                        {label}
                       </button>
                     ))}
                   </div>
