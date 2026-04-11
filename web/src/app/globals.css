@@ -513,6 +513,33 @@ a {
   opacity: 0.72;
 }
 
+/* ─── Sidebar toggle ─────────────────────── */
+
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border-mid);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  flex-shrink: 0;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.sidebar-toggle:hover {
+  color: var(--foreground);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 /* ─── Animations ─────────────────────────── */
 
 @keyframes fadeUp {
