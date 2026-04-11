@@ -208,11 +208,10 @@ function ViewHeader({
   aside?: React.ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-3 border-b border-border pb-4 lg:flex-row lg:items-end lg:justify-between">
+    <header className="flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <p className="section-kicker">private life</p>
-        <h2 className="mt-1 text-[1.65rem] font-medium tracking-[-0.04em] text-foreground">{title}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{description}</p>
+        <h2 className="text-xl font-medium tracking-[-0.03em] text-foreground">{title}</h2>
+        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted">{description}</p>
       </div>
       {aside}
     </header>
@@ -221,7 +220,7 @@ function ViewHeader({
 
 function EmptyState({ label }: { label: string }) {
   return (
-    <article className="rounded-[1rem] border border-border bg-panel px-4 py-5 text-sm text-muted">
+    <article className="rounded-xl border border-border bg-panel px-4 py-5 text-sm text-muted">
       {label}
     </article>
   );
@@ -237,7 +236,7 @@ function MediaCard({ entry }: { entry: LifeEntry }) {
       : "Fecha exacta";
 
   return (
-    <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+    <article className="rounded-xl border border-border bg-panel px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1.5">
           <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
@@ -262,7 +261,7 @@ function MediaCard({ entry }: { entry: LifeEntry }) {
 
 function WritingCard({ entry }: { entry: LifeEntry }) {
   return (
-    <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+    <article className="rounded-xl border border-border bg-panel px-4 py-4">
       <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
         {entrySectionLabels[normalizeSection(entry)]} · {formatDate(entry.date)}
       </p>
@@ -283,7 +282,7 @@ function ArchiveCard({
   const rating = getDisplayRating(entry);
 
   return (
-    <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+    <article className="rounded-xl border border-border bg-panel px-4 py-4">
       <div className="flex flex-wrap items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-muted">
         <span>{formatDate(entry.date)}</span>
         <span>{entryTypeLabels[entry.type]}</span>
@@ -824,9 +823,9 @@ export function PrivateLifeApp() {
       <main className="mx-auto flex min-h-screen w-full max-w-[1520px] items-center justify-center px-4 py-10">
         <div className="loading-card">
           <p className="section-kicker">private life</p>
-          <h1 className="mt-3 text-2xl font-medium text-foreground">Cargando archivo...</h1>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            Estoy trayendo tus datos desde {syncSource === "supabase" ? "Supabase" : "localStorage"}.
+          <h1 className="mt-3 text-lg font-medium text-foreground">Cargando...</h1>
+          <p className="mt-2 text-sm text-muted">
+            {syncSource === "supabase" ? "Supabase" : "localStorage"}
           </p>
         </div>
       </main>
@@ -834,17 +833,14 @@ export function PrivateLifeApp() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-5 lg:px-6">
-      <div className="grid gap-3 xl:grid-cols-[230px_minmax(0,1fr)]">
-        <aside className="rounded-[1.4rem] border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)]">
+    <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
+      <div className="grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="flex flex-col rounded-xl border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)]">
             <div className="border-b border-border pb-4">
               <p className="section-kicker">private life</p>
-              <h1 className="mt-2 text-[1.85rem] font-medium tracking-[-0.05em] text-foreground">
+              <h1 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">
                 Archivo vivo.
               </h1>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                Menos dashboard y mas secciones utiles.
-              </p>
             </div>
 
             <div className="mt-5 grid gap-2">
@@ -855,7 +851,7 @@ export function PrivateLifeApp() {
                 onChange={handleImportFile}
                 className="hidden"
               />
-              <button type="button" onClick={openImportPicker} className="primary-button justify-center">
+              <button type="button" onClick={openImportPicker} className="secondary-button w-full justify-center">
                 Importar JSON
               </button>
               {importMessage ? <p className="text-xs leading-5 text-muted">{importMessage}</p> : null}
@@ -874,22 +870,21 @@ export function PrivateLifeApp() {
                 key={view}
                 type="button"
                 onClick={() => setActiveView(view as AppView)}
-                className={activeView === view ? "filter-button-active justify-start" : "filter-button justify-start"}
+                className={activeView === view ? "nav-link nav-link-active" : "nav-link"}
               >
                 {label}
               </button>
             ))}
           </nav>
 
-          <div className="mt-6 rounded-[1rem] border border-border bg-panel px-4 py-4">
-            <p className="section-kicker">Sincronizacion</p>
-            <p className="mt-2 text-sm text-foreground">
-              {syncSource === "supabase" ? "Supabase activo" : "localStorage activo"}
+          <div className="mt-auto pt-4 border-t border-border">
+            <p className="text-xs text-muted">
+              {syncSource === "supabase" ? "↑ Supabase" : "↑ Local"}
             </p>
           </div>
         </aside>
 
-        <section className="rounded-[1.4rem] border border-border bg-surface px-4 py-5 sm:px-5 sm:py-5">
+        <section className="rounded-xl border border-border bg-surface px-5 py-5 sm:px-6 sm:py-6">
             {activeView === "habits" ? (
             <div className="space-y-5">
               <ViewHeader
@@ -976,7 +971,7 @@ export function PrivateLifeApp() {
                     </div>
 
                   {isHabitComposerOpen ? (
-                    <form className="grid gap-3 rounded-[1rem] border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
+                    <form className="grid gap-3 rounded-xl border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-sm font-medium text-foreground">
                           {habitDraft.originalTitle ? "Editar habito" : "Crear habito"}
@@ -1028,7 +1023,7 @@ export function PrivateLifeApp() {
                   </div>
                 ) : selectedHabitMeta && habitStats ? (
                   <div className="space-y-4">
-                    <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                    <article className="rounded-xl border border-border bg-panel px-4 py-4">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="section-kicker">habito activo</p>
@@ -1075,7 +1070,7 @@ export function PrivateLifeApp() {
                     </article>
                   </div>
 
-                  <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                  <article className="rounded-xl border border-border bg-panel px-4 py-4">
                     <div className="flex items-end justify-between gap-3">
                       <div>
                         <p className="section-kicker">Constancia</p>
@@ -1092,7 +1087,7 @@ export function PrivateLifeApp() {
                     </div>
                   </article>
 
-                  <article className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                  <article className="rounded-xl border border-border bg-panel px-4 py-4">
                     <p className="section-kicker">Patron semanal</p>
                     <div className="mt-4 grid gap-2">
                       {["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"].map((label, index) => {
@@ -1224,7 +1219,7 @@ export function PrivateLifeApp() {
               ) : (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {milestoneEntries.map((entry) => (
-                    <article key={entry.id} className="rounded-[1rem] border border-border bg-panel px-4 py-4">
+                    <article key={entry.id} className="rounded-xl border border-border bg-panel px-4 py-4">
                       <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">{formatDate(entry.date)}</p>
                       <h3 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
                       {entry.content ? <p className="mt-2 text-sm leading-6 text-muted">{entry.content}</p> : null}
