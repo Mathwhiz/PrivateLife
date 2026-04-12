@@ -629,6 +629,97 @@ cd PrivateLife/web</pre>
   </div>
 </div>
 
+<!-- ══ PAGE 7: Funcionalidades + Personalización ══════════════════ -->
+<div class="page">
+  <div class="section-num">Referencia rápida</div>
+  <div class="section-title">Secciones de la app</div>
+
+  <table class="summary">
+    <tr>
+      <th>Sección</th>
+      <th>Descripción</th>
+    </tr>
+    <tr>
+      <td>Hábitos</td>
+      <td>Tracker diario con checklist, historial y estadísticas de racha</td>
+    </tr>
+    <tr>
+      <td>Biblioteca</td>
+      <td>Películas, series, libros, anime y manga con rating, géneros y filtros</td>
+    </tr>
+    <tr>
+      <td>Textos</td>
+      <td>Escritos personales: pensamientos, filosofía, anécdotas</td>
+    </tr>
+    <tr>
+      <td>Hitos</td>
+      <td>Momentos importantes con fecha y contexto</td>
+    </tr>
+    <tr>
+      <td>Archivo</td>
+      <td>Vista global de todas las entradas del sistema</td>
+    </tr>
+    <tr>
+      <td>Ajustes</td>
+      <td>Exportar/importar datos, configurar menú y biblioteca</td>
+    </tr>
+  </table>
+
+  <div class="divider"></div>
+
+  <div class="section-num">Biblioteca</div>
+  <div class="section-title">Filtros y orden</div>
+
+  <div class="step">
+    <div class="step-body">
+      <p>En la biblioteca podés combinar filtros y orden libremente:</p>
+      <ul class="checklist">
+        <li><strong>Tipo:</strong> Todo / Película / Serie / Libro / Anime / Manga</li>
+        <li><strong>Rating:</strong> Todas / 8+ / 9+ / 10</li>
+        <li><strong>Orden:</strong> Más reciente · Más antigua · Nota ↓ · Nota ↑</li>
+        <li><strong>Géneros:</strong> Filtro dinámico basado en los tags que cargaste</li>
+        <li><strong>Búsqueda:</strong> Por nombre en tiempo real</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-num">Ajustes → Personalización</div>
+  <div class="section-title">Hacer la app tuya</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Menú lateral</h3>
+      <p>En <strong>Ajustes → Menu lateral</strong> podés renombrar cada sección (por ejemplo, cambiar "Hábitos" por "Rutinas") o desactivar las que no usás. Los cambios se guardan automáticamente.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Tipos de biblioteca</h3>
+      <p>En <strong>Ajustes → Tipos de biblioteca</strong> podés renombrar categorías (por ejemplo, "Película" → "Film") o desactivar las que no te interesan. El botón "Restaurar" vuelve a los valores originales.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Importante:</strong> La configuración se guarda en el navegador (localStorage). Si usás la app en otro dispositivo, la configuración es independiente en cada uno.
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-num">Datos</div>
+  <div class="section-title">Exportar e importar</div>
+
+  <div class="step">
+    <div class="step-body">
+      <p>Desde <strong>Ajustes → Exportar datos</strong> descargás un archivo JSON con todas tus entradas. Podés usarlo como backup o para migrar a otro dispositivo importándolo con <strong>Ajustes → Importar datos</strong>.</p>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>`;
 
