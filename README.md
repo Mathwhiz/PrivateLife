@@ -1,8 +1,34 @@
 # PrivateLife
 
-Un segundo cerebro personal. Registrá hábitos, biblioteca de libros/series/películas, escritos, hitos y más — todo en una sola app, privada y tuya.
+Un segundo cerebro personal. Registrá hábitos, biblioteca, escritos, hitos y más — todo en una sola app, privada y tuya.
 
 > Para el tutorial completo de instalación paso a paso, descargá [`tutorial.pdf`](./tutorial.pdf).
+
+---
+
+## Qué incluye
+
+| Sección | Descripción |
+|---|---|
+| Hábitos | Tracker diario con checklist, historial y estadísticas |
+| Biblioteca | Películas, series, libros, anime, manga — con rating, géneros y filtros |
+| Textos | Escritos personales: pensamientos, filosofía, anécdotas |
+| Hitos | Momentos importantes con fecha y contexto |
+| Archivo | Vista global de todas las entradas |
+| Ajustes | Exportar/importar datos, configurar la app |
+
+### Biblioteca
+
+- Tipos: Película, Serie, Libro, Anime, Manga
+- Filtros por tipo, género, rating (8+, 9+, 10)
+- Orden: más reciente, más antigua, nota ↓, nota ↑
+- Búsqueda por nombre
+
+### Personalización (desde Ajustes)
+
+- Renombrá o ocultá cualquier sección del menú lateral
+- Renombrá o desactivá tipos de la biblioteca
+- La config se guarda localmente y persiste entre visitas
 
 ---
 
