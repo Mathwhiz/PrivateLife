@@ -586,7 +586,9 @@ export function PrivateLifeApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string>("");
+  const [syncConflict, setSyncConflict] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const lastSyncedAt = useRef<string | null>(null);
   const deferredQuery = useDeferredValue(searchQuery);
 
   // 1. Verificar sesión al montar y escuchar cambios de auth
@@ -618,6 +620,7 @@ export function PrivateLifeApp() {
       if (result?.entries?.length) {
         setEntries(result.entries);
         setSyncSource(result.source);
+        lastSyncedAt.current = result.updatedAt;
       }
 
       setIsHydrated(true);
@@ -632,8 +635,16 @@ export function PrivateLifeApp() {
   useEffect(() => {
     if (!isHydrated) return;
 
-    void saveEntries(entries).then((result) => {
-      setSyncSource(result.source);
+    void saveEntries(entries, lastSyncedAt.current).then((result) => {
+      if (result.source === "conflict") {
+        lastSyncedAt.current = result.remoteUpdatedAt;
+        setSyncConflict(true);
+        setEntries(result.remoteEntries);
+        setTimeout(() => setSyncConflict(false), 4000);
+      } else {
+        if (result.source === "supabase") lastSyncedAt.current = result.updatedAt;
+        setSyncSource(result.source);
+      }
     });
   }, [entries, isHydrated]);
 
@@ -1218,6 +1229,11 @@ export function PrivateLifeApp() {
 
   return (
     <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
+      {syncConflict && (
+        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400">
+          Conflicto de sincronización — se cargaron los datos más recientes de la nube.
+        </div>
+      )}
       <div className={`grid gap-3 ${sidebarOpen ? "xl:grid-cols-[220px_minmax(0,1fr)]" : ""}`}>
         <aside className={`flex flex-col rounded-xl border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)] ${sidebarOpen ? "" : "hidden"}`}>
             <div className="flex items-start justify-between border-b border-border pb-4">
