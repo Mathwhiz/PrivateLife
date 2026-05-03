@@ -112,6 +112,7 @@ type HabitStats = {
   bestStreak: number;
   completionRate30: number;
   weekdayCounts: number[];
+  monthlyCounts: Array<{ year: number; months: number[] }>;
   lastDone: string | null;
 };
 
@@ -134,7 +135,7 @@ const defaultFormState = (): FormState => ({
   section: sectionOptionsByType[defaultType][0],
   title: "",
   content: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: todayAR(),
   tags: "",
 });
 
@@ -151,7 +152,7 @@ function defaultMediaForm(type: EntryType = "movie"): MediaFormState {
     type,
     title: "",
     content: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: todayAR(),
     rating: "",
     tags: "",
   };
@@ -285,6 +286,13 @@ function daysBetween(reference: string, target: string) {
   const ref = startOfDay(new Date(`${reference}T12:00:00`));
   const tar = startOfDay(new Date(`${target}T12:00:00`));
   return Math.floor((ref.getTime() - tar.getTime()) / 86_400_000);
+}
+
+// Fecha de hoy en horario de Argentina (UTC-3, sin DST)
+function todayAR(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  }).format(new Date());
 }
 
 function makeEntryId(prefix: string, ...parts: string[]) {
@@ -571,7 +579,7 @@ export function PrivateLifeApp() {
   const [libraryFilter, setLibraryFilter] = useState<EntryType | "all-media">("all-media");
   const [genreFilter, setGenreFilter] = useState<string>("all-genres");
   const [writingFilter, setWritingFilter] = useState<EntrySection | "all-writing">("all-writing");
-  const [habitDate, setHabitDate] = useState(new Date().toISOString().slice(0, 10));
+  const [habitDate, setHabitDate] = useState(todayAR);
   const [form, setForm] = useState<FormState>(defaultFormState);
   const [habitDraft, setHabitDraft] = useState<HabitDraft>(defaultHabitDraft);
   const [isHabitComposerOpen, setIsHabitComposerOpen] = useState(false);
@@ -587,6 +595,7 @@ export function PrivateLifeApp() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string>("");
   const [syncConflict, setSyncConflict] = useState(false);
+  const [pendingRemoteEntries, setPendingRemoteEntries] = useState<LifeEntry[] | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const lastSyncedAt = useRef<string | null>(null);
   const deferredQuery = useDeferredValue(searchQuery);
@@ -631,16 +640,36 @@ export function PrivateLifeApp() {
     };
   }, [authState]);
 
-  // 3. Guardar entradas cada vez que cambian
+  // 3. Re-sincronizar con Supabase cuando la pestaña/app vuelve a estar visible
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!lastSyncedAt.current) return; // todavía no cargó la primera vez
+
+      void loadEntries().then((result) => {
+        if (!result?.entries?.length) return;
+        if (result.updatedAt <= lastSyncedAt.current!) return; // ya tenemos la versión más nueva
+        setEntries(result.entries);
+        lastSyncedAt.current = result.updatedAt;
+        setSyncSource(result.source);
+      });
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [authState]);
+
+  // 4. Guardar entradas cada vez que cambian
   useEffect(() => {
     if (!isHydrated) return;
 
     void saveEntries(entries, lastSyncedAt.current).then((result) => {
       if (result.source === "conflict") {
         lastSyncedAt.current = result.remoteUpdatedAt;
+        setPendingRemoteEntries(result.remoteEntries);
         setSyncConflict(true);
-        setEntries(result.remoteEntries);
-        setTimeout(() => setSyncConflict(false), 4000);
       } else {
         if (result.source === "supabase") lastSyncedAt.current = result.updatedAt;
         setSyncSource(result.source);
@@ -792,6 +821,18 @@ export function PrivateLifeApp() {
 
     const completionRate30 = Math.round((selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 29).length / 30) * 100);
 
+    const monthlyMap = new Map<number, number[]>();
+    for (const entry of selectedHabitLogs) {
+      const d = new Date(`${entry.date}T12:00:00`);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      if (!monthlyMap.has(y)) monthlyMap.set(y, Array<number>(12).fill(0));
+      monthlyMap.get(y)![m] += 1;
+    }
+    const monthlyCounts = [...monthlyMap.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([year, months]) => ({ year, months }));
+
     return {
       total: selectedHabitLogs.length,
       week: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 6).length,
@@ -801,6 +842,7 @@ export function PrivateLifeApp() {
       bestStreak,
       completionRate30,
       weekdayCounts,
+      monthlyCounts,
       lastDone: selectedHabitLogs[0]?.date ?? null,
     };
   }, [activeHabitTitle, habitDate, selectedHabitLogs]);
@@ -1230,8 +1272,33 @@ export function PrivateLifeApp() {
   return (
     <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
       {syncConflict && (
-        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400">
-          Conflicto de sincronización — se cargaron los datos más recientes de la nube.
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400">
+          <span>Conflicto de sincronización — hay datos más recientes en la nube. Tus cambios actuales se mantienen.</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded bg-amber-500/20 px-2 py-1 text-xs hover:bg-amber-500/30"
+              onClick={() => {
+                if (pendingRemoteEntries) {
+                  setEntries(pendingRemoteEntries);
+                  setPendingRemoteEntries(null);
+                }
+                setSyncConflict(false);
+              }}
+            >
+              Cargar nube
+            </button>
+            <button
+              type="button"
+              className="rounded px-2 py-1 text-xs hover:bg-amber-500/20"
+              onClick={() => {
+                setPendingRemoteEntries(null);
+                setSyncConflict(false);
+              }}
+            >
+              Ignorar
+            </button>
+          </div>
         </div>
       )}
       <div className={`grid gap-3 ${sidebarOpen ? "xl:grid-cols-[220px_minmax(0,1fr)]" : ""}`}>
@@ -1360,13 +1427,6 @@ export function PrivateLifeApp() {
                                 }}
                               >
                                 Ver
-                              </button>
-                              <button
-                                type="button"
-                                className="habit-inline-link"
-                                onClick={() => startEditingHabit(habit.title)}
-                              >
-                                Editar
                               </button>
                             </div>
                           </div>
@@ -1509,6 +1569,39 @@ export function PrivateLifeApp() {
                       })}
                     </div>
                   </article>
+
+                  {habitStats.monthlyCounts.length > 0 && (
+                    <article className="rounded-xl border border-border bg-panel px-4 py-4">
+                      <p className="section-kicker">Por año y mes</p>
+                      <div className="mt-4 grid gap-6">
+                        {habitStats.monthlyCounts.map(({ year, months }) => {
+                          const maxMonth = Math.max(...months, 1);
+                          return (
+                            <div key={year}>
+                              <p className="mb-2 text-xs font-medium text-foreground">{year}</p>
+                              <div className="grid gap-1.5">
+                                {months.map((count, monthIndex) => {
+                                  const label = new Intl.DateTimeFormat("es-AR", { month: "short" }).format(
+                                    new Date(year, monthIndex),
+                                  );
+                                  const width = count === 0 ? 0 : Math.max(4, (count / maxMonth) * 100);
+                                  return (
+                                    <div key={monthIndex} className="grid grid-cols-[36px_minmax(0,1fr)_24px] items-center gap-3">
+                                      <span className="text-xs text-muted capitalize">{label}</span>
+                                      <div className="habit-bar-track">
+                                        <span className="habit-bar-fill" style={{ width: `${width}%` }} />
+                                      </div>
+                                      <span className="text-xs text-foreground">{count}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </article>
+                  )}
                 </div>
               ) : (
                 <EmptyState label="Elige un habito para ver estadisticas y editarlo." />
