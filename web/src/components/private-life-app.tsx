@@ -1,7 +1,16 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { loadEntries, saveEntries } from "@/lib/persistence";
+import {
+  flushSave,
+  getKnownUpdatedAt,
+  hasPendingSave,
+  loadEntries,
+  scheduleSave,
+  setKnownUpdatedAt,
+  type SaveHandlers,
+  type SaveStatus,
+} from "@/lib/persistence";
 import { getSession, signOut as authSignOut, onAuthStateChange } from "@/lib/auth";
 import { LoginScreen } from "@/components/login-screen";
 import {
@@ -573,6 +582,7 @@ export function PrivateLifeApp() {
   const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">("checking");
   const [entries, setEntries] = useState<LifeEntry[]>(initialEntries);
   const [syncSource, setSyncSource] = useState<"supabase" | "local">("local");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isHydrated, setIsHydrated] = useState(false);
   const [activeView, setActiveView] = useState<AppView>("habits");
   const [archiveFilter, setArchiveFilter] = useState<EntryType | "all">("all");
@@ -597,7 +607,8 @@ export function PrivateLifeApp() {
   const [syncConflict, setSyncConflict] = useState(false);
   const [pendingRemoteEntries, setPendingRemoteEntries] = useState<LifeEntry[] | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
-  const lastSyncedAt = useRef<string | null>(null);
+  // Evita el eco: cuando las entradas vienen de la nube no hay que volver a subirlas.
+  const skipNextSave = useRef(false);
   const deferredQuery = useDeferredValue(searchQuery);
 
   // 1. Verificar sesión al montar y escuchar cambios de auth
@@ -627,9 +638,10 @@ export function PrivateLifeApp() {
       if (cancelled) return;
 
       if (result?.entries?.length) {
+        skipNextSave.current = true;
         setEntries(result.entries);
         setSyncSource(result.source);
-        lastSyncedAt.current = result.updatedAt;
+        setKnownUpdatedAt(result.updatedAt);
       }
 
       setIsHydrated(true);
@@ -645,36 +657,63 @@ export function PrivateLifeApp() {
     if (authState !== "authenticated") return;
 
     const handleVisibility = () => {
-      if (document.visibilityState !== "visible") return;
-      if (!lastSyncedAt.current) return; // todavía no cargó la primera vez
+      // Al irse: subir ya lo que quedo esperando el debounce.
+      if (document.visibilityState === "hidden") {
+        void flushSave();
+        return;
+      }
+
+      if (!getKnownUpdatedAt()) return; // todavia no cargo la primera vez
+      if (hasPendingSave()) return; // hay cambios sin subir: no los pisamos
 
       void loadEntries().then((result) => {
         if (!result?.entries?.length) return;
-        if (result.updatedAt <= lastSyncedAt.current!) return; // ya tenemos la versión más nueva
+        const known = getKnownUpdatedAt();
+        if (known && result.updatedAt <= known) return; // ya tenemos la version mas nueva
+        skipNextSave.current = true;
         setEntries(result.entries);
-        lastSyncedAt.current = result.updatedAt;
+        setKnownUpdatedAt(result.updatedAt);
         setSyncSource(result.source);
       });
     };
 
+    const handleExit = () => {
+      void flushSave();
+    };
+
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", handleExit);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", handleExit);
+    };
   }, [authState]);
 
-  // 4. Guardar entradas cada vez que cambian
+  // 4. Guardar entradas cada vez que cambian.
+  //    scheduleSave escribe local al instante y agrupa las subidas: marcar
+  //    varios habitos seguidos manda una sola escritura, no una por click.
+  const saveHandlers = useRef<SaveHandlers>({
+    onStatus: () => {},
+    onConflict: () => {},
+    onSynced: () => {},
+  });
+  saveHandlers.current = {
+    onStatus: setSaveStatus,
+    onConflict: (remoteEntries) => {
+      setPendingRemoteEntries(remoteEntries);
+      setSyncConflict(true);
+    },
+    onSynced: setSyncSource,
+  };
+
   useEffect(() => {
     if (!isHydrated) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
+    }
 
-    void saveEntries(entries, lastSyncedAt.current).then((result) => {
-      if (result.source === "conflict") {
-        lastSyncedAt.current = result.remoteUpdatedAt;
-        setPendingRemoteEntries(result.remoteEntries);
-        setSyncConflict(true);
-      } else {
-        if (result.source === "supabase") lastSyncedAt.current = result.updatedAt;
-        setSyncSource(result.source);
-      }
-    });
+    scheduleSave(entries, saveHandlers.current);
   }, [entries, isHydrated]);
 
   // 4. Guardar config en localStorage cada vez que cambia
@@ -1238,6 +1277,17 @@ export function PrivateLifeApp() {
     reader.readAsText(file);
   }
 
+  const saveLabel =
+    saveStatus === "saving"
+      ? "Guardando…"
+      : saveStatus === "pending"
+        ? "Sin conexión — reintentando"
+        : saveStatus === "conflict"
+          ? "Sin subir"
+          : syncSource === "supabase"
+            ? "Guardado"
+            : "Solo en este equipo";
+
   const currentSectionOptions = sectionOptionsByType[form.type];
 
   if (authState === "checking") {
@@ -1273,20 +1323,22 @@ export function PrivateLifeApp() {
     <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
       {syncConflict && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400">
-          <span>Conflicto de sincronización — hay datos más recientes en la nube. Tus cambios actuales se mantienen.</span>
+          <span>Se editó desde otro dispositivo. Elegí con cuál te quedas.</span>
           <div className="flex gap-2">
             <button
               type="button"
               className="rounded bg-amber-500/20 px-2 py-1 text-xs hover:bg-amber-500/30"
               onClick={() => {
                 if (pendingRemoteEntries) {
+                  skipNextSave.current = true;
                   setEntries(pendingRemoteEntries);
                   setPendingRemoteEntries(null);
                 }
                 setSyncConflict(false);
+                setSaveStatus("saved");
               }}
             >
-              Cargar nube
+              Traer lo de la nube
             </button>
             <button
               type="button"
@@ -1294,9 +1346,11 @@ export function PrivateLifeApp() {
               onClick={() => {
                 setPendingRemoteEntries(null);
                 setSyncConflict(false);
+                // Subir lo de este dispositivo encima de lo remoto.
+                scheduleSave(entries, saveHandlers.current);
               }}
             >
-              Ignorar
+              Mantener lo mío
             </button>
           </div>
         </div>
@@ -1337,7 +1391,8 @@ export function PrivateLifeApp() {
 
           <div className="mt-auto pt-4 border-t border-border">
             <p className="text-xs text-muted">
-              {syncSource === "supabase" ? "↑ Supabase" : "↑ Local"}
+              {saveStatus === "saving" ? "↻ " : "↑ "}
+              {saveLabel}
             </p>
           </div>
         </aside>
@@ -2016,7 +2071,9 @@ export function PrivateLifeApp() {
                     ? "Supabase activo — los datos se sincronizan en la nube."
                     : "Modo local — los datos viven en este navegador."}
                 </p>
-                <p className="mt-1 text-xs text-muted">{entries.length} entradas en total.</p>
+                <p className="mt-1 text-xs text-muted">
+                  {entries.length} entradas en total · {saveLabel.toLowerCase()}.
+                </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
