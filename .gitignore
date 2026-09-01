@@ -6,3 +6,10 @@ archivo-personal/
 tools/
 *.pdf
 *.xlsx
+
+# Notas y config local (fuera de GitHub)
+estado-proyecto.md
+plan-segundo-cerebro.md
+.claude/
+web/android/.idea/
+web/supabase/.temp/
