@@ -6,6 +6,7 @@ export type EntryType =
   | "series"
   | "anime"
   | "manga"
+  | "game"
   | "note";
 
 export type EntrySection =
@@ -18,7 +19,8 @@ export type EntrySection =
   | "book"
   | "series"
   | "anime"
-  | "manga";
+  | "manga"
+  | "game";
 
 export type LifeEntry = {
   id: string;
@@ -39,6 +41,7 @@ export const entryTypeLabels: Record<EntryType, string> = {
   series: "Serie",
   anime: "Anime",
   manga: "Manga",
+  game: "Videojuego",
   note: "Nota",
 };
 
@@ -53,6 +56,7 @@ export const entrySectionLabels: Record<EntrySection, string> = {
   series: "Serie",
   anime: "Anime",
   manga: "Manga",
+  game: "Videojuego",
 };
 
 export const sectionOptionsByType: Record<EntryType, EntrySection[]> = {
@@ -63,6 +67,7 @@ export const sectionOptionsByType: Record<EntryType, EntrySection[]> = {
   series: ["series"],
   anime: ["anime"],
   manga: ["manga"],
+  game: ["game"],
   note: ["philosophy", "thought", "general"],
 };
 

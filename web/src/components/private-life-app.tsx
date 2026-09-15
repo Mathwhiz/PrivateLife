@@ -32,6 +32,8 @@ const systemMediaTags = new Set([
   "book",
   "anime",
   "manga",
+  "game",
+  "steam",
   "imported",
   "imdb",
   "life-xlsx",
@@ -42,8 +44,8 @@ const systemMediaTags = new Set([
   "childhood",
 ]);
 
-const entryTypes: EntryType[] = ["memory", "habit", "movie", "book", "series", "anime", "manga", "note"];
-const mediaTypes: EntryType[] = ["movie", "series", "book", "anime", "manga"];
+const entryTypes: EntryType[] = ["memory", "habit", "movie", "book", "series", "anime", "manga", "game", "note"];
+const mediaTypes: EntryType[] = ["movie", "series", "book", "anime", "manga", "game"];
 const writingSections: EntrySection[] = ["philosophy", "thought", "anecdote"];
 
 type AppView = "capture" | "habits" | "library" | "writings" | "milestones" | "archive" | "ajustes";
@@ -72,6 +74,7 @@ const defaultAppConfig: AppConfig = {
     { id: "book",   label: "Libro",    visible: true },
     { id: "anime",  label: "Anime",    visible: true },
     { id: "manga",  label: "Manga",    visible: true },
+    { id: "game",   label: "Videojuego", visible: true },
   ],
 };
 
@@ -208,6 +211,8 @@ function normalizeSection(entry: LifeEntry): EntrySection {
       return "anime";
     case "manga":
       return "manga";
+    case "game":
+      return "game";
     case "memory":
       return "anecdote";
     case "note":
@@ -891,15 +896,25 @@ export function PrivateLifeApp() {
     [normalizedEntries],
   );
 
+  // Solo los generos del tipo elegido: pelis y juegos usan vocabularios distintos.
   const mediaGenres = useMemo(
     () =>
       [...new Set(
-        mediaEntries.flatMap((entry) =>
-          entry.tags.filter((tag) => !systemMediaTags.has(tag) && !tag.includes("import")),
-        ),
+        mediaEntries
+          .filter((entry) => libraryFilter === "all-media" || entry.type === libraryFilter)
+          .flatMap((entry) =>
+            entry.tags.filter((tag) => !systemMediaTags.has(tag) && !tag.includes("import")),
+          ),
       )].sort((a, b) => a.localeCompare(b)),
-    [mediaEntries],
+    [libraryFilter, mediaEntries],
   );
+
+  // Si el genero elegido no existe en el tipo nuevo, quedaria un filtro fantasma.
+  useEffect(() => {
+    if (genreFilter !== "all-genres" && !mediaGenres.includes(genreFilter)) {
+      setGenreFilter("all-genres");
+    }
+  }, [genreFilter, mediaGenres]);
 
   const visibleMedia = useMemo(() => {
     const byType =
