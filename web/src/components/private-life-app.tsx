@@ -11,16 +11,19 @@ import {
   type SaveHandlers,
   type SaveStatus,
 } from "@/lib/persistence";
-import { getSession, signOut as authSignOut, onAuthStateChange } from "@/lib/auth";
+import { getSession, onAuthStateChange } from "@/lib/auth";
 import { LoginScreen } from "@/components/login-screen";
-import { AppConfig, AppView, CONFIG_KEY, defaultAppConfig, loadConfig } from "@/lib/app-config";
-import { FormState, HabitDraft, HabitStats, HabitViewMode, MediaFormState, daysBetween, defaultFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, entryTypes, formatDate, habitHiddenTag, habitTemplateTag, isHabitLogEntry, isHabitTemplateEntry, isHiddenHabitTemplateEntry, makeEntryId, mediaTypes, normalizeHabitTitle, normalizeSection, sortEntries, systemMediaTags, todayAR, writingSections } from "@/lib/entries";
-import { EmptyState, ViewHeader } from "@/components/ui/common";
-import { ArchiveCard, MediaCard, WritingCard } from "@/components/ui/entry-cards";
-import { MediaEditorForm } from "@/components/ui/media-editor-form";
+import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
+import { FormState, HabitDraft, HabitStats, HabitViewMode, MediaFormState, daysBetween, defaultFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, isHabitLogEntry, isHabitTemplateEntry, isHiddenHabitTemplateEntry, makeEntryId, mediaTypes, normalizeHabitTitle, normalizeSection, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
+import { ArchiveView } from "@/components/views/archive-view";
+import { CaptureView } from "@/components/views/capture-view";
+import { HabitsView } from "@/components/views/habits-view";
+import { LibraryView } from "@/components/views/library-view";
+import { MilestonesView } from "@/components/views/milestones-view";
+import { SettingsView } from "@/components/views/ajustes-view";
+import { WritingsView } from "@/components/views/writings-view";
 import {
   entrySectionLabels,
-  entryTypeLabels,
   initialEntries,
   quickHabits,
   sectionOptionsByType,
@@ -28,7 +31,6 @@ import {
   type EntryType,
   type LifeEntry,
 } from "@/lib/types";
-
 
 export function PrivateLifeApp() {
   const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">("checking");
@@ -898,793 +900,100 @@ export function PrivateLifeApp() {
               </div>
             ) : null}
             {activeView === "habits" ? (
-            <div className="space-y-5">
-              <ViewHeader
-                title="Hábitos diarios"
-                description={
-                  habitViewMode === "checklist"
-                    ? "Checklist compacta para resolver el día sin ruido."
-                    : "Detalle del hábito con estadísticas y edición."
-                }
-                aside={
-                  <div className="flex flex-wrap items-center gap-2">
-                    {habitViewMode === "detail" ? (
-                      <button type="button" className="secondary-button" onClick={() => setHabitViewMode("checklist")}>
-                        Volver
-                      </button>
-                    ) : null}
-                      <label className="grid gap-2 text-sm">
-                        <span className="font-medium text-foreground">Fecha</span>
-                        <input
-                          type="date"
-                          value={habitDate}
-                          onChange={(event) => setHabitDate(event.target.value)}
-                          className="field min-w-40"
-                        />
-                      </label>
-                    </div>
-                  }
-                />
-
-              {habitViewMode === "checklist" ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="section-kicker">Checklist</p>
-                      <p className="mt-1 text-sm text-muted">Marca lo de hoy y listo.</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="habit-add-button"
-                      onClick={() => {
-                        setHabitDraft(defaultHabitDraft());
-                        setIsHabitComposerOpen((current) => !current);
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-
-                    <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
-                      {habitCatalog.map((habit) => {
-                        const checked = habitsForDay.some((entry) => entry.title === habit.title);
-                        return (
-                          <div key={habit.title} className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}>
-                          <button
-                            type="button"
-                            onClick={() => toggleHabit(habit.title)}
-                            className="habit-toggle-main"
-                          >
-                              <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
-                              <span className="truncate">{habit.title}</span>
-                            </button>
-                            <div className="habit-inline-actions">
-                              <button
-                                type="button"
-                                className="habit-inline-link"
-                                onClick={() => {
-                                  setSelectedHabit(habit.title);
-                                  setHabitViewMode("detail");
-                                }}
-                              >
-                                Ver
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                  {isHabitComposerOpen ? (
-                    <form className="grid gap-3 rounded-xl border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-medium text-foreground">
-                          {habitDraft.originalTitle ? "Editar hábito" : "Crear hábito"}
-                        </h3>
-                        <button
-                          type="button"
-                          className="text-xs text-muted"
-                          onClick={() => {
-                            setHabitDraft(defaultHabitDraft());
-                            setIsHabitComposerOpen(false);
-                          }}
-                        >
-                          Cerrar
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        value={habitDraft.title}
-                        onChange={(event) => setHabitDraft((current) => ({ ...current, title: event.target.value }))}
-                        placeholder="Nombre del hábito"
-                        className="field"
-                      />
-                      <input
-                        type="text"
-                        value={habitDraft.tags}
-                        onChange={(event) => setHabitDraft((current) => ({ ...current, tags: event.target.value }))}
-                        placeholder="salud, rutina, estudio"
-                        className="field"
-                      />
-                      <textarea
-                        value={habitDraft.content}
-                        onChange={(event) => setHabitDraft((current) => ({ ...current, content: event.target.value }))}
-                        placeholder="Contexto corto del hábito"
-                        rows={3}
-                        className="field resize-y"
-                      />
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {habitDraft.originalTitle ? (
-                            <button type="button" className="danger-button" onClick={deleteHabitDraft}>
-                              Eliminar
-                            </button>
-                          ) : null}
-                          <button type="submit" className="primary-button">
-                            Guardar hábito
-                          </button>
-                        </div>
-                      </form>
-                    ) : null}
-                  </div>
-                ) : selectedHabitMeta && habitStats ? (
-                  <div className="space-y-4">
-                    <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="section-kicker">hábito activo</p>
-                          <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
-                          <p className="mt-2 text-sm leading-6 text-muted">
-                            {selectedHabitMeta.content || "Sin descripcion"}
-                          </p>
-                        </div>
-                        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                          <button type="button" className="secondary-button" onClick={() => startEditingHabit(selectedHabitMeta.title)}>
-                            Editar
-                          </button>
-                          <button type="button" className="danger-button" onClick={() => deleteHabit(selectedHabitMeta.title)}>
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <article className="stat-card">
-                      <span className="stat-label">7 dias</span>
-                      <strong className="stat-value">{habitStats.week}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">30 dias</span>
-                      <strong className="stat-value">{habitStats.month}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">365 dias</span>
-                      <strong className="stat-value">{habitStats.year}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">Total</span>
-                      <strong className="stat-value">{habitStats.total}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">Racha actual</span>
-                      <strong className="stat-value">{habitStats.currentStreak}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">Mejor racha</span>
-                      <strong className="stat-value">{habitStats.bestStreak}</strong>
-                    </article>
-                  </div>
-
-                  <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <p className="section-kicker">Constancia</p>
-                        <strong className="mt-2 block text-3xl font-medium text-foreground">
-                          {habitStats.completionRate30}%
-                        </strong>
-                        <p className="mt-2 text-sm text-muted">
-                          Porcentaje de dias cumplidos en los ultimos 30 dias.
-                        </p>
-                      </div>
-                      <p className="text-xs text-muted">
-                        Última vez: {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
-                      </p>
-                    </div>
-                  </article>
-
-                  <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                    <p className="section-kicker">Patron semanal</p>
-                    <div className="mt-4 grid gap-2">
-                      {["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"].map((label, index) => {
-                        const value = habitStats.weekdayCounts[index];
-                        const width = habitStats.total === 0 ? 0 : Math.max(10, (value / habitStats.total) * 100);
-                        return (
-                          <div key={label} className="grid grid-cols-[36px_minmax(0,1fr)_24px] items-center gap-3">
-                            <span className="text-xs text-muted">{label}</span>
-                            <div className="habit-bar-track">
-                              <span className="habit-bar-fill" style={{ width: `${width}%` }} />
-                            </div>
-                            <span className="text-xs text-foreground">{value}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </article>
-
-                  {habitStats.monthlyCounts.length > 0 && (
-                    <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                      <p className="section-kicker">Por año y mes</p>
-                      <div className="mt-4 grid gap-6">
-                        {habitStats.monthlyCounts.map(({ year, months }) => {
-                          const maxMonth = Math.max(...months, 1);
-                          return (
-                            <div key={year}>
-                              <p className="mb-2 text-xs font-medium text-foreground">{year}</p>
-                              <div className="grid gap-1.5">
-                                {months.map((count, monthIndex) => {
-                                  const label = new Intl.DateTimeFormat("es-AR", { month: "short" }).format(
-                                    new Date(year, monthIndex),
-                                  );
-                                  const width = count === 0 ? 0 : Math.max(4, (count / maxMonth) * 100);
-                                  return (
-                                    <div key={monthIndex} className="grid grid-cols-[36px_minmax(0,1fr)_24px] items-center gap-3">
-                                      <span className="text-xs text-muted capitalize">{label}</span>
-                                      <div className="habit-bar-track">
-                                        <span className="habit-bar-fill" style={{ width: `${width}%` }} />
-                                      </div>
-                                      <span className="text-xs text-foreground">{count}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </article>
-                  )}
-                </div>
-              ) : (
-                <EmptyState label="Elegí un hábito para ver estadísticas y editarlo." />
-              )}
-            </div>
+            <HabitsView
+              deleteHabit={deleteHabit}
+              deleteHabitDraft={deleteHabitDraft}
+              habitCatalog={habitCatalog}
+              habitDate={habitDate}
+              habitDraft={habitDraft}
+              habitStats={habitStats}
+              habitViewMode={habitViewMode}
+              habitsForDay={habitsForDay}
+              isHabitComposerOpen={isHabitComposerOpen}
+              saveHabitTemplate={saveHabitTemplate}
+              selectedHabitMeta={selectedHabitMeta}
+              setHabitDate={setHabitDate}
+              setHabitDraft={setHabitDraft}
+              setHabitViewMode={setHabitViewMode}
+              setIsHabitComposerOpen={setIsHabitComposerOpen}
+              setSelectedHabit={setSelectedHabit}
+              startEditingHabit={startEditingHabit}
+              toggleHabit={toggleHabit}
+            />
           ) : null}
 
           {activeView === "library" ? (
-            <div className="space-y-5">
-              <ViewHeader
-                title="Biblioteca"
-                description="Películas, series y libros con género filtrable, fecha clara y tu nota arriba."
-                aside={
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openMediaEditor()}
-                      className="primary-button"
-                    >
-                      + Nueva
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLibraryFilter("all-media")}
-                      className={libraryFilter === "all-media" ? "filter-button-active" : "filter-button"}
-                    >
-                      Todo
-                    </button>
-                    {appConfig.mediaTypes
-                      .filter((mt) => mt.visible)
-                      .map(({ id, label }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => setLibraryFilter(id as EntryType)}
-                          className={libraryFilter === id ? "filter-button-active" : "filter-button"}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                  </div>
-                }
-              />
-
-              {mediaForm !== null ? (
-                <MediaEditorForm
-                  form={mediaForm}
-                  onChange={(updates) =>
-                    setMediaForm((current) => (current ? { ...current, ...updates } : current))
-                  }
-                  onSubmit={saveMediaForm}
-                  onCancel={() => setMediaForm(null)}
-                  onDelete={
-                    mediaForm.id
-                      ? () => {
-                          deleteEntry(mediaForm.id);
-                          setMediaForm(null);
-                        }
-                      : undefined
-                  }
-                  typeConfig={appConfig.mediaTypes}
-                />
-              ) : null}
-
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="search"
-                    value={librarySearch}
-                    onChange={(e) => setLibrarySearch(e.target.value)}
-                    placeholder="Buscar por nombre..."
-                    className="field max-w-xs"
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {(["all", "8", "9", "10"] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRatingFilter(r)}
-                        className={ratingFilter === r ? "filter-button-active" : "filter-button"}
-                      >
-                        {r === "all" ? "Todas" : `${r}+`}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(
-                      [
-                        ["date-desc", "Más reciente"],
-                        ["date-asc", "Más antigua"],
-                        ["rating-desc", "Nota ↓"],
-                        ["rating-asc", "Nota ↑"],
-                      ] as const
-                    ).map(([val, label]) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => setLibrarySort(val)}
-                        className={librarySort === val ? "filter-button-active" : "filter-button"}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {mediaGenres.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setGenreFilter("all-genres")}
-                      className={genreFilter === "all-genres" ? "filter-button-active" : "filter-button"}
-                    >
-                      Todos los generos
-                    </button>
-                    {mediaGenres.slice(0, 24).map((genre) => (
-                      <button
-                        key={genre}
-                        type="button"
-                        onClick={() => setGenreFilter(genre)}
-                        className={genreFilter === genre ? "filter-button-active" : "filter-button"}
-                      >
-                        {genre}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              {visibleMedia.length === 0 ? (
-                <EmptyState label="No hay items para este filtro." />
-              ) : (
-                <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-                  {visibleMedia.map((entry) => (
-                    <MediaCard
-                      key={entry.id}
-                      entry={entry}
-                      onEdit={() => openMediaEditor(entry)}
-                      onDelete={() => deleteEntry(entry.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            <LibraryView
+              appConfig={appConfig}
+              deleteEntry={deleteEntry}
+              genreFilter={genreFilter}
+              libraryFilter={libraryFilter}
+              librarySearch={librarySearch}
+              librarySort={librarySort}
+              mediaForm={mediaForm}
+              mediaGenres={mediaGenres}
+              openMediaEditor={openMediaEditor}
+              ratingFilter={ratingFilter}
+              saveMediaForm={saveMediaForm}
+              setGenreFilter={setGenreFilter}
+              setLibraryFilter={setLibraryFilter}
+              setLibrarySearch={setLibrarySearch}
+              setLibrarySort={setLibrarySort}
+              setMediaForm={setMediaForm}
+              setRatingFilter={setRatingFilter}
+              visibleMedia={visibleMedia}
+            />
           ) : null}
 
           {activeView === "writings" ? (
-            <div className="space-y-5">
-              <ViewHeader
-                title="Textos y pensamientos"
-                description="Vista compacta por fecha, sin interminables columnas de texto."
-                aside={
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setWritingFilter("all-writing")}
-                      className={writingFilter === "all-writing" ? "filter-button-active" : "filter-button"}
-                    >
-                      Todo
-                    </button>
-                    {writingSections.map((section) => (
-                      <button
-                        key={section}
-                        type="button"
-                        onClick={() => setWritingFilter(section)}
-                        className={writingFilter === section ? "filter-button-active" : "filter-button"}
-                      >
-                        {entrySectionLabels[section]}
-                      </button>
-                    ))}
-                  </div>
-                }
-              />
-              {visibleWritings.length === 0 ? (
-                <EmptyState label="No hay textos para este filtro." />
-              ) : (
-                <div className="space-y-3">
-                  {visibleWritings.map((entry) => (
-                    <WritingCard key={entry.id} entry={entry} />
-                  ))}
-                </div>
-              )}
-            </div>
+            <WritingsView
+              writingFilter={writingFilter}
+              setWritingFilter={setWritingFilter}
+              visibleWritings={visibleWritings}
+            />
           ) : null}
 
           {activeView === "milestones" ? (
-            <div className="space-y-5">
-              <ViewHeader title="Hitos JW" description="Fechas, privilegios y pasos importantes de tu recorrido." />
-              {milestoneEntries.length === 0 ? (
-                <EmptyState label="No hay hitos cargados." />
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {milestoneEntries.map((entry) => (
-                    <article key={entry.id} className="rounded-xl border border-border bg-panel px-4 py-4">
-                      <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">{formatDate(entry.date)}</p>
-                      <h3 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
-                      {entry.content ? <p className="mt-2 text-sm leading-6 text-muted">{entry.content}</p> : null}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MilestonesView
+              milestoneEntries={milestoneEntries}
+            />
           ) : null}
 
           {activeView === "archive" ? (
-            <div className="space-y-5">
-              <ViewHeader
-                title="Archivo completo"
-                description="Búsqueda global para recorrer todo el sistema cuando lo necesitás."
-              />
-
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Buscar por texto, etiqueta o seccion"
-                  className="field"
-                />
-                {activeTag ? (
-                  <button type="button" onClick={() => setActiveTag(null)} className="secondary-button">
-                    Quitar etiqueta: {activeTag}
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setArchiveFilter("all")}
-                  className={archiveFilter === "all" ? "filter-button-active" : "filter-button"}
-                >
-                  Todo
-                </button>
-                {entryTypes.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setArchiveFilter(type)}
-                    className={archiveFilter === type ? "filter-button-active" : "filter-button"}
-                  >
-                    {entryTypeLabels[type]}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {allTags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setActiveTag((current) => (current === tag ? null : tag))}
-                    className={activeTag === tag ? "filter-button-active" : "filter-button"}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-
-              {filteredArchive.length === 0 ? (
-                <EmptyState label="No hay entradas para el filtro actual." />
-              ) : (
-                <div className="space-y-3">
-                  {filteredArchive.map((entry) => (
-                    <ArchiveCard key={entry.id} entry={entry} onTagClick={setActiveTag} />
-                  ))}
-                </div>
-              )}
-            </div>
+            <ArchiveView
+              activeTag={activeTag}
+              allTags={allTags}
+              archiveFilter={archiveFilter}
+              filteredArchive={filteredArchive}
+              searchQuery={searchQuery}
+              setActiveTag={setActiveTag}
+              setArchiveFilter={setArchiveFilter}
+              setSearchQuery={setSearchQuery}
+            />
           ) : null}
 
           {activeView === "capture" ? (
-            <div className="space-y-5">
-              <ViewHeader
-                title="Nueva entrada"
-                description="Captura rapida para pensamiento, anecdota, texto o recuerdo."
-              />
-
-              <form className="grid gap-4" onSubmit={handleSubmit}>
-                <div className="grid gap-4 md:grid-cols-4">
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium text-foreground">Tipo</span>
-                    <select
-                      value={form.type}
-                      onChange={(event) => updateForm("type", event.target.value as EntryType)}
-                      className="field"
-                    >
-                      {entryTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {entryTypeLabels[type]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium text-foreground">Seccion</span>
-                    <select
-                      value={form.section}
-                      onChange={(event) => updateForm("section", event.target.value as EntrySection)}
-                      className="field"
-                    >
-                      {currentSectionOptions.map((section) => (
-                        <option key={section} value={section}>
-                          {entrySectionLabels[section]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                    <label className="grid gap-2 text-sm">
-                      <span className="font-medium text-foreground">Fecha</span>
-                      <input
-                        type="date"
-                        value={form.date}
-                        onChange={(event) => updateForm("date", event.target.value)}
-                        className="field"
-                      />
-                    </label>
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium text-foreground">Etiquetas</span>
-                    <input
-                      type="text"
-                      value={form.tags}
-                      onChange={(event) => updateForm("tags", event.target.value)}
-                      placeholder="filosofia, rutina, cine"
-                      className="field"
-                    />
-                  </label>
-                </div>
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium text-foreground">Título</span>
-                  <input
-                    type="text"
-                    value={form.title}
-                    onChange={(event) => updateForm("title", event.target.value)}
-                    placeholder="Que quieres guardar ahora"
-                    className="field"
-                  />
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium text-foreground">Contenido</span>
-                  <textarea
-                    value={form.content}
-                    onChange={(event) => updateForm("content", event.target.value)}
-                    placeholder="Anota el hecho, el pensamiento o el contexto."
-                    rows={10}
-                    className="field min-h-40 resize-y"
-                  />
-                </label>
-
-                <div className="flex justify-end">
-                  <button type="submit" className="primary-button">
-                    Guardar entrada
-                  </button>
-                </div>
-              </form>
-            </div>
+            <CaptureView
+              currentSectionOptions={currentSectionOptions}
+              form={form}
+              handleSubmit={handleSubmit}
+              updateForm={updateForm}
+            />
           ) : null}
 
           {activeView === "ajustes" ? (
-            <div className="space-y-5">
-              <ViewHeader
-                title="Ajustes"
-                description="Gestion de datos y configuracion de la app."
-              />
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-panel px-4 py-5">
-                  <p className="section-kicker">Exportar datos</p>
-                  <p className="mt-2 text-sm leading-6 text-muted">
-                    Descarga todas tus entradas como archivo JSON. Guardalo como backup manual.
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-4 secondary-button"
-                    onClick={handleExport}
-                  >
-                    Exportar JSON
-                  </button>
-                </div>
-
-                <div className="rounded-xl border border-border bg-panel px-4 py-5">
-                  <p className="section-kicker">Importar datos</p>
-                  <p className="mt-2 text-sm leading-6 text-muted">
-                    Carga un archivo JSON exportado previamente. Reemplaza las entradas actuales.
-                  </p>
-                  <input
-                    ref={importInputRef}
-                    type="file"
-                    accept="application/json"
-                    onChange={handleImportFile}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    className="mt-4 secondary-button"
-                    onClick={openImportPicker}
-                  >
-                    Importar JSON
-                  </button>
-                  {importMessage ? (
-                    <p className="mt-2 text-xs text-muted">{importMessage}</p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border bg-panel px-4 py-5">
-                <p className="section-kicker">Sincronizacion</p>
-                <p className="mt-2 text-sm text-foreground">
-                  {syncSource === "supabase"
-                    ? "Supabase activo — los datos se sincronizan en la nube."
-                    : "Modo local — los datos viven en este navegador."}
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  {entries.length} entradas en total · {saveLabel.toLowerCase()}.
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                {/* Config: Menu lateral */}
-                <div className="rounded-xl border border-border bg-panel px-4 py-5">
-                  <div className="flex items-center justify-between">
-                    <p className="section-kicker">Menu lateral</p>
-                    <button
-                      type="button"
-                      className="text-xs text-muted transition-colors hover:text-foreground"
-                      onClick={() => setAppConfig((prev) => ({ ...prev, sidebar: defaultAppConfig.sidebar }))}
-                    >
-                      Restaurar
-                    </button>
-                  </div>
-                  <p className="mt-1.5 text-xs text-muted">Renombrá o ocultá secciones del menú.</p>
-                  <div className="mt-4 grid gap-2">
-                    {appConfig.sidebar.map((item, i) => (
-                      <div key={item.view} className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={item.view === "ajustes"}
-                          onClick={() =>
-                            setAppConfig((prev) => ({
-                              ...prev,
-                              sidebar: prev.sidebar.map((s, j) =>
-                                j === i ? { ...s, visible: !s.visible } : s,
-                              ),
-                            }))
-                          }
-                          className={`flex-shrink-0 w-7 h-7 rounded-md border text-xs font-medium transition-colors ${
-                            item.visible
-                              ? "border-sage/40 bg-sage/10 text-sage"
-                              : "border-border bg-transparent text-muted"
-                          } ${item.view === "ajustes" ? "opacity-30 cursor-not-allowed" : ""}`}
-                          title={item.view === "ajustes" ? "Ajustes siempre visible" : item.visible ? "Ocultar" : "Mostrar"}
-                        >
-                          {item.visible ? "✓" : "—"}
-                        </button>
-                        <input
-                          type="text"
-                          value={item.label}
-                          onChange={(e) =>
-                            setAppConfig((prev) => ({
-                              ...prev,
-                              sidebar: prev.sidebar.map((s, j) =>
-                                j === i ? { ...s, label: e.target.value } : s,
-                              ),
-                            }))
-                          }
-                          className="field text-sm"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Config: Tipos de biblioteca */}
-                <div className="rounded-xl border border-border bg-panel px-4 py-5">
-                  <div className="flex items-center justify-between">
-                    <p className="section-kicker">Tipos de biblioteca</p>
-                    <button
-                      type="button"
-                      className="text-xs text-muted transition-colors hover:text-foreground"
-                      onClick={() => setAppConfig((prev) => ({ ...prev, mediaTypes: defaultAppConfig.mediaTypes }))}
-                    >
-                      Restaurar
-                    </button>
-                  </div>
-                  <p className="mt-1.5 text-xs text-muted">Renombrá o desactivá categorías de la biblioteca.</p>
-                  <div className="mt-4 grid gap-2">
-                    {appConfig.mediaTypes.map((mt, i) => (
-                      <div key={mt.id} className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAppConfig((prev) => ({
-                              ...prev,
-                              mediaTypes: prev.mediaTypes.map((m, j) =>
-                                j === i ? { ...m, visible: !m.visible } : m,
-                              ),
-                            }))
-                          }
-                          className={`flex-shrink-0 w-7 h-7 rounded-md border text-xs font-medium transition-colors ${
-                            mt.visible
-                              ? "border-sage/40 bg-sage/10 text-sage"
-                              : "border-border bg-transparent text-muted"
-                          }`}
-                          title={mt.visible ? "Ocultar" : "Mostrar"}
-                        >
-                          {mt.visible ? "✓" : "—"}
-                        </button>
-                        <input
-                          type="text"
-                          value={mt.label}
-                          onChange={(e) =>
-                            setAppConfig((prev) => ({
-                              ...prev,
-                              mediaTypes: prev.mediaTypes.map((m, j) =>
-                                j === i ? { ...m, label: e.target.value } : m,
-                              ),
-                            }))
-                          }
-                          className="field text-sm"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border bg-panel px-4 py-5">
-                <p className="section-kicker">Sesion</p>
-                <p className="mt-2 text-sm text-muted">
-                  Cerrar sesión desconecta este dispositivo. Los datos en la nube no se borran.
-                </p>
-                <button
-                  type="button"
-                  className="mt-4 danger-button"
-                  onClick={() => void authSignOut()}
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            </div>
+            <SettingsView
+              appConfig={appConfig}
+              setAppConfig={setAppConfig}
+              entries={entries}
+              handleExport={handleExport}
+              handleImportFile={handleImportFile}
+              importInputRef={importInputRef}
+              importMessage={importMessage}
+              openImportPicker={openImportPicker}
+              saveLabel={saveLabel}
+              syncSource={syncSource}
+            />
           ) : null}
         </section>
       </div>
