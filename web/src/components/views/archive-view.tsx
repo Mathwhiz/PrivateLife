@@ -83,7 +83,7 @@ export function ArchiveView({
               {filteredArchive.length === 0 ? (
                 <EmptyState label="No hay entradas para el filtro actual." />
               ) : (
-                <div className="space-y-3">
+                <div className="grid items-start gap-3 @3xl:grid-cols-2 @7xl:grid-cols-3">
                   {filteredArchive.map((entry) => (
                     <ArchiveCard key={entry.id} entry={entry} onTagClick={setActiveTag} />
                   ))}

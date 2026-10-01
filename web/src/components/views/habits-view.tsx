@@ -93,7 +93,7 @@ export function HabitsView({
                     </button>
                   </div>
 
-                    <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+                    <div className="grid gap-2 @xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4">
                       {habitCatalog.map((habit) => {
                         const checked = habitsForDay.some((entry) => entry.title === habit.title);
                         return (
@@ -196,7 +196,7 @@ export function HabitsView({
                       </div>
                     </article>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3">
                     <article className="stat-card">
                       <span className="stat-label">7 dias</span>
                       <strong className="stat-value">{habitStats.week}</strong>

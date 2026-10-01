@@ -174,7 +174,7 @@ export function LibraryView({
               {visibleMedia.length === 0 ? (
                 <EmptyState label="No hay items para este filtro." />
               ) : (
-                <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4">
                   {visibleMedia.map((entry) => (
                     <MediaCard
                       key={entry.id}

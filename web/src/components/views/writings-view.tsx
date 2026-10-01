@@ -45,7 +45,7 @@ export function WritingsView({
               {visibleWritings.length === 0 ? (
                 <EmptyState label="No hay textos para este filtro." />
               ) : (
-                <div className="space-y-3">
+                <div className="grid items-start gap-3 @3xl:grid-cols-2 @7xl:grid-cols-3">
                   {visibleWritings.map((entry) => (
                     <WritingCard key={entry.id} entry={entry} />
                   ))}

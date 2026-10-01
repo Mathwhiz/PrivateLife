@@ -808,7 +808,7 @@ export function PrivateLifeApp() {
   const mobileNavItems = appConfig.sidebar.filter((item) => item.visible);
 
   return (
-    <main className="app-shellmx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
+    <main className="app-shell mx-auto flex w-full max-w-[2200px] flex-col px-3 py-3 sm:px-4 lg:px-5">
       {syncConflict && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold/30 bg-gold/10 px-4 py-2.5 text-sm text-gold">
           <span>Se editó desde otro dispositivo. Elegí con cuál te quedás.</span>
@@ -885,7 +885,7 @@ export function PrivateLifeApp() {
           </div>
         </aside>
 
-        <section className="rounded-xl border border-border bg-surface px-5 py-5 sm:px-6 sm:py-6">
+        <section className="@container min-w-0 rounded-xl border border-border bg-surface px-5 py-5 sm:px-6 sm:py-6">
             {!sidebarOpen ? (
               <div className="mb-5 hidden items-center gap-3 border-b border-border pb-4 xl:flex">
                 <button

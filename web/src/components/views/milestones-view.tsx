@@ -15,7 +15,7 @@ export function MilestonesView({
               {milestoneEntries.length === 0 ? (
                 <EmptyState label="No hay hitos cargados." />
               ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4">
                   {milestoneEntries.map((entry) => (
                     <article key={entry.id} className="rounded-xl border border-border bg-panel px-4 py-4">
                       <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">{formatDate(entry.date)}</p>
