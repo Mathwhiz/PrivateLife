@@ -60,7 +60,7 @@ type AppConfig = { sidebar: SidebarItemConfig[]; mediaTypes: MediaTypeConfig[] }
 
 const defaultAppConfig: AppConfig = {
   sidebar: [
-    { view: "habits",     label: "Habitos",       visible: true },
+    { view: "habits",     label: "Hábitos",       visible: true },
     { view: "library",    label: "Biblioteca",     visible: true },
     { view: "writings",   label: "Textos",         visible: true },
     { view: "milestones", label: "Hitos",          visible: true },
@@ -69,7 +69,7 @@ const defaultAppConfig: AppConfig = {
     { view: "ajustes",    label: "Ajustes",        visible: true },
   ],
   mediaTypes: [
-    { id: "movie",  label: "Pelicula", visible: true },
+    { id: "movie",  label: "Película", visible: true },
     { id: "series", label: "Serie",    visible: true },
     { id: "book",   label: "Libro",    visible: true },
     { id: "anime",  label: "Anime",    visible: true },
@@ -77,6 +77,8 @@ const defaultAppConfig: AppConfig = {
     { id: "game",   label: "Videojuego", visible: true },
   ],
 };
+
+const legacyLabels = new Set(["Habitos", "Pelicula"]);
 
 function loadConfig(): AppConfig {
   if (typeof window === "undefined") return defaultAppConfig;
@@ -87,11 +89,15 @@ function loadConfig(): AppConfig {
     return {
       sidebar: defaultAppConfig.sidebar.map((def) => {
         const s = parsed.sidebar?.find((x) => x.view === def.view);
-        return s ? { ...def, ...s } : def;
+        if (!s) return def;
+        // Etiquetas viejas sin tilde guardadas en localStorage: usar la nueva.
+        const label = legacyLabels.has(s.label) ? def.label : s.label;
+        return { ...def, ...s, label };
       }),
       mediaTypes: defaultAppConfig.mediaTypes.map((def) => {
         const m = parsed.mediaTypes?.find((x) => x.id === def.id);
-        return m ? { ...def, ...m } : def;
+        if (!m) return def;
+        return { ...def, ...m, label: legacyLabels.has(m.label) ? def.label : m.label };
       }),
     };
   } catch {
@@ -540,12 +546,12 @@ function MediaEditorForm({
       </div>
 
       <label className="grid gap-1.5 text-xs">
-        <span className="font-medium uppercase tracking-wide text-muted">Titulo</span>
+        <span className="font-medium uppercase tracking-wide text-muted">Título</span>
         <input
           type="text"
           value={form.title}
           onChange={(e) => onChange({ title: e.target.value })}
-          placeholder="Titulo de la obra"
+          placeholder="Título de la obra"
           className="field"
           autoFocus
         />
@@ -601,6 +607,9 @@ export function PrivateLifeApp() {
   const [selectedHabit, setSelectedHabit] = useState<string | null>(null);
   const [habitViewMode, setHabitViewMode] = useState<HabitViewMode>("checklist");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [undoDelete, setUndoDelete] = useState<{ entry: LifeEntry; index: number } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mediaForm, setMediaForm] = useState<MediaFormState | null>(null);
   const [ratingFilter, setRatingFilter] = useState<"all" | "8" | "9" | "10">("all");
   const [librarySearch, setLibrarySearch] = useState("");
@@ -1203,7 +1212,26 @@ export function PrivateLifeApp() {
   }
 
   function deleteEntry(id: string) {
+    const index = entries.findIndex((e) => e.id === id);
+    if (index === -1) return;
+    const removed = entries[index];
     setEntries((current) => current.filter((e) => e.id !== id));
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoDelete({ entry: removed, index });
+    undoTimer.current = setTimeout(() => setUndoDelete(null), 6000);
+  }
+
+  function undoDeleteEntry() {
+    if (!undoDelete) return;
+    const { entry, index } = undoDelete;
+    setEntries((current) => {
+      if (current.some((e) => e.id === entry.id)) return current;
+      const next = [...current];
+      next.splice(Math.min(index, next.length), 0, entry);
+      return next;
+    });
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoDelete(null);
   }
 
   function openMediaEditor(entry?: LifeEntry) {
@@ -1334,15 +1362,17 @@ export function PrivateLifeApp() {
     );
   }
 
+  const mobileNavItems = appConfig.sidebar.filter((item) => item.visible);
+
   return (
-    <main className="mx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
+    <main className="app-shellmx-auto flex w-full max-w-[1520px] flex-col px-3 py-3 sm:px-4 lg:px-5">
       {syncConflict && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400">
-          <span>Se editó desde otro dispositivo. Elegí con cuál te quedas.</span>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold/30 bg-gold/10 px-4 py-2.5 text-sm text-gold">
+          <span>Se editó desde otro dispositivo. Elegí con cuál te quedás.</span>
           <div className="flex gap-2">
             <button
               type="button"
-              className="rounded bg-amber-500/20 px-2 py-1 text-xs hover:bg-amber-500/30"
+              className="rounded bg-gold/20 px-2 py-1 text-xs hover:bg-gold/30"
               onClick={() => {
                 if (pendingRemoteEntries) {
                   skipNextSave.current = true;
@@ -1357,7 +1387,7 @@ export function PrivateLifeApp() {
             </button>
             <button
               type="button"
-              className="rounded px-2 py-1 text-xs hover:bg-amber-500/20"
+              className="rounded px-2 py-1 text-xs hover:bg-gold/20"
               onClick={() => {
                 setPendingRemoteEntries(null);
                 setSyncConflict(false);
@@ -1371,7 +1401,7 @@ export function PrivateLifeApp() {
         </div>
       )}
       <div className={`grid gap-3 ${sidebarOpen ? "xl:grid-cols-[220px_minmax(0,1fr)]" : ""}`}>
-        <aside className={`flex flex-col rounded-xl border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)] ${sidebarOpen ? "" : "hidden"}`}>
+        <aside className={`hidden flex-col rounded-xl border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)] ${sidebarOpen ? "xl:flex" : ""}`}>
             <div className="flex items-start justify-between border-b border-border pb-4">
               <div>
                 <p className="section-kicker">private life</p>
@@ -1383,7 +1413,7 @@ export function PrivateLifeApp() {
                 type="button"
                 onClick={() => setSidebarOpen(false)}
                 className="sidebar-toggle mt-0.5"
-                title="Cerrar menu"
+                title="Cerrar menú"
               >
                 ‹
               </button>
@@ -1414,12 +1444,12 @@ export function PrivateLifeApp() {
 
         <section className="rounded-xl border border-border bg-surface px-5 py-5 sm:px-6 sm:py-6">
             {!sidebarOpen ? (
-              <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">
+              <div className="mb-5 hidden items-center gap-3 border-b border-border pb-4 xl:flex">
                 <button
                   type="button"
                   onClick={() => setSidebarOpen(true)}
                   className="sidebar-toggle"
-                  title="Abrir menu"
+                  title="Abrir menú"
                 >
                   ≡
                 </button>
@@ -1429,11 +1459,11 @@ export function PrivateLifeApp() {
             {activeView === "habits" ? (
             <div className="space-y-5">
               <ViewHeader
-                title="Habitos diarios"
+                title="Hábitos diarios"
                 description={
                   habitViewMode === "checklist"
-                    ? "Checklist compacta para resolver el dia sin ruido."
-                    : "Detalle del habito con estadisticas y edicion."
+                    ? "Checklist compacta para resolver el día sin ruido."
+                    : "Detalle del hábito con estadísticas y edición."
                 }
                 aside={
                   <div className="flex flex-wrap items-center gap-2">
@@ -1508,7 +1538,7 @@ export function PrivateLifeApp() {
                     <form className="grid gap-3 rounded-xl border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-sm font-medium text-foreground">
-                          {habitDraft.originalTitle ? "Editar habito" : "Crear habito"}
+                          {habitDraft.originalTitle ? "Editar hábito" : "Crear hábito"}
                         </h3>
                         <button
                           type="button"
@@ -1525,7 +1555,7 @@ export function PrivateLifeApp() {
                         type="text"
                         value={habitDraft.title}
                         onChange={(event) => setHabitDraft((current) => ({ ...current, title: event.target.value }))}
-                        placeholder="Nombre del habito"
+                        placeholder="Nombre del hábito"
                         className="field"
                       />
                       <input
@@ -1538,7 +1568,7 @@ export function PrivateLifeApp() {
                       <textarea
                         value={habitDraft.content}
                         onChange={(event) => setHabitDraft((current) => ({ ...current, content: event.target.value }))}
-                        placeholder="Contexto corto del habito"
+                        placeholder="Contexto corto del hábito"
                         rows={3}
                         className="field resize-y"
                       />
@@ -1549,7 +1579,7 @@ export function PrivateLifeApp() {
                             </button>
                           ) : null}
                           <button type="submit" className="primary-button">
-                            Guardar habito
+                            Guardar hábito
                           </button>
                         </div>
                       </form>
@@ -1560,7 +1590,7 @@ export function PrivateLifeApp() {
                     <article className="rounded-xl border border-border bg-panel px-4 py-4">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <p className="section-kicker">habito activo</p>
+                          <p className="section-kicker">hábito activo</p>
                           <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
                           <p className="mt-2 text-sm leading-6 text-muted">
                             {selectedHabitMeta.content || "Sin descripcion"}
@@ -1616,7 +1646,7 @@ export function PrivateLifeApp() {
                         </p>
                       </div>
                       <p className="text-xs text-muted">
-                        Ultima vez: {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
+                        Última vez: {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
                       </p>
                     </div>
                   </article>
@@ -1674,7 +1704,7 @@ export function PrivateLifeApp() {
                   )}
                 </div>
               ) : (
-                <EmptyState label="Elige un habito para ver estadisticas y editarlo." />
+                <EmptyState label="Elegí un hábito para ver estadísticas y editarlo." />
               )}
             </div>
           ) : null}
@@ -1683,7 +1713,7 @@ export function PrivateLifeApp() {
             <div className="space-y-5">
               <ViewHeader
                 title="Biblioteca"
-                description="Peliculas, series y libros con genero filtrable, fecha clara y tu nota arriba."
+                description="Películas, series y libros con género filtrable, fecha clara y tu nota arriba."
                 aside={
                   <div className="flex flex-wrap items-center gap-2">
                     <button
@@ -1880,7 +1910,7 @@ export function PrivateLifeApp() {
             <div className="space-y-5">
               <ViewHeader
                 title="Archivo completo"
-                description="Busqueda global para recorrer todo el sistema cuando lo necesitas."
+                description="Búsqueda global para recorrer todo el sistema cuando lo necesitás."
               />
 
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
@@ -2002,7 +2032,7 @@ export function PrivateLifeApp() {
                 </div>
 
                 <label className="grid gap-2 text-sm">
-                  <span className="font-medium text-foreground">Titulo</span>
+                  <span className="font-medium text-foreground">Título</span>
                   <input
                     type="text"
                     value={form.title}
@@ -2203,20 +2233,81 @@ export function PrivateLifeApp() {
               <div className="rounded-xl border border-border bg-panel px-4 py-5">
                 <p className="section-kicker">Sesion</p>
                 <p className="mt-2 text-sm text-muted">
-                  Cerrar sesion desconecta este dispositivo. Los datos en la nube no se borran.
+                  Cerrar sesión desconecta este dispositivo. Los datos en la nube no se borran.
                 </p>
                 <button
                   type="button"
                   className="mt-4 danger-button"
                   onClick={() => void authSignOut()}
                 >
-                  Cerrar sesion
+                  Cerrar sesión
                 </button>
               </div>
             </div>
           ) : null}
         </section>
       </div>
+
+      {undoDelete ? (
+        <div className="undo-toast" role="status">
+          <span className="truncate">Se eliminó “{undoDelete.entry.title}”</span>
+          <button type="button" className="undo-toast-action" onClick={undoDeleteEntry}>
+            Deshacer
+          </button>
+        </div>
+      ) : null}
+
+      {moreOpen ? (
+        <div className="more-sheet-backdrop xl:hidden" onClick={() => setMoreOpen(false)}>
+          <div className="more-sheet" role="menu" onClick={(event) => event.stopPropagation()}>
+            {mobileNavItems.slice(4).map(({ view, label }) => (
+              <button
+                key={view}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setActiveView(view);
+                  setMoreOpen(false);
+                }}
+                className={activeView === view ? "nav-link nav-link-active" : "nav-link"}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <nav className="bottom-nav xl:hidden" aria-label="Secciones">
+        {mobileNavItems.slice(0, mobileNavItems.length > 5 ? 4 : 5).map(({ view, label }) => (
+          <button
+            key={view}
+            type="button"
+            onClick={() => {
+              setActiveView(view);
+              setMoreOpen(false);
+            }}
+            className={activeView === view ? "bottom-nav-item bottom-nav-item-active" : "bottom-nav-item"}
+            aria-current={activeView === view ? "page" : undefined}
+          >
+            {label}
+          </button>
+        ))}
+        {mobileNavItems.length > 5 ? (
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            className={
+              moreOpen || mobileNavItems.slice(4).some((item) => item.view === activeView)
+                ? "bottom-nav-item bottom-nav-item-active"
+                : "bottom-nav-item"
+            }
+            aria-expanded={moreOpen}
+          >
+            Más
+          </button>
+        ) : null}
+      </nav>
     </main>
   );
 }

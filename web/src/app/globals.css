@@ -8,7 +8,7 @@
   --panel: #19191d;
   --border: rgba(255, 255, 255, 0.065);
   --border-mid: rgba(255, 255, 255, 0.11);
-  --muted: #6b6762;
+  --muted: #8d8880;
   --accent: #c8905a;
   --accent-soft: rgba(200, 144, 90, 0.13);
   --rose: #b86868;
@@ -549,6 +549,181 @@ a {
   color: var(--foreground);
   border-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Mobile: safe area, bottom nav, touch targets ─── */
+
+.app-shell {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1280px) {
+  .app-shell {
+    padding-bottom: 0.75rem;
+  }
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  border-top: 1px solid var(--border-mid);
+  background: rgba(19, 19, 21, 0.96);
+  backdrop-filter: blur(12px);
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.bottom-nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 3.25rem;
+  padding: 0 0.25rem;
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-top: 2px solid transparent;
+}
+
+.bottom-nav-item-active {
+  color: var(--accent);
+  border-top-color: var(--accent);
+}
+
+.more-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.more-sheet {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border-mid);
+  border-radius: 0.75rem;
+  background: var(--surface-strong);
+  padding: 0.5rem;
+}
+
+.more-sheet .nav-link {
+  min-height: 2.75rem;
+  font-size: 0.95rem;
+}
+
+.undo-toast {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 28rem;
+  margin: 0 auto;
+  border: 1px solid var(--border-mid);
+  border-radius: 0.6rem;
+  background: var(--surface-strong);
+  padding: 0.4rem 0.4rem 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.undo-toast-action {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  border-radius: 0.4rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+@media (min-width: 1280px) {
+  .undo-toast {
+    bottom: 1.5rem;
+  }
+}
+
+/* Dedos: objetivos táctiles de ~44px en pantallas táctiles */
+@media (pointer: coarse) {
+  .sidebar-toggle,
+  .habit-add-button {
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 1.2rem;
+  }
+
+  .habit-inline-link {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .habit-toggle-pill,
+  .habit-check-row {
+    min-height: 3rem;
+  }
+
+  .habit-toggle-box {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.8rem;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .filter-button,
+  .filter-button-active {
+    min-height: 2.75rem;
+    padding: 0 1rem;
+  }
+
+  .field {
+    min-height: 2.75rem;
+    font-size: 1rem; /* evita el zoom automático al enfocar */
+  }
+}
+
+/* ─── Foco y movimiento reducido ─────────── */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.field:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .fade-up,
+  .fade-up-delay {
+    animation: none;
+  }
 }
 
 /* ─── Animations ─────────────────────────── */

@@ -1,9 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "PrivateLife",
-  description: "Tu archivo personal de vida — recuerdos, habitos, biblioteca e historial.",
+  description: "Tu archivo personal de vida — recuerdos, hábitos, biblioteca e historial.",
 };
 
 export default function RootLayout({
