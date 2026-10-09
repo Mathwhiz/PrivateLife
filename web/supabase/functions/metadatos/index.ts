@@ -190,11 +190,15 @@ async function buscarOpenLibrary(q: string): Promise<Resultado[]> {
 const STEAM_CDN = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps";
 
 // La tapa vertical no existe para todos los juegos (sobre todo los viejos): si falta,
-// usamos el header horizontal, que sí tienen todos.
+// usamos el header horizontal. Los juegos nuevos lo tienen en una ruta con hash que
+// solo da appdetails, así que si la ruta clásica falla le preguntamos a la tienda.
 async function tapaSteam(appid: number) {
-  const vertical = `${STEAM_CDN}/${appid}/library_600x900.jpg`;
-  const r = await fetch(vertical, { method: "HEAD" });
-  return r.ok ? vertical : `${STEAM_CDN}/${appid}/header.jpg`;
+  for (const archivo of ["library_600x900.jpg", "header.jpg"]) {
+    const url = `${STEAM_CDN}/${appid}/${archivo}`;
+    if ((await fetch(url, { method: "HEAD" })).ok) return url;
+  }
+  const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appid}&filters=basic`);
+  return r.ok ? ((await r.json())[appid]?.data?.header_image ?? null) : null;
 }
 
 async function buscarSteam(q: string): Promise<Resultado[]> {
