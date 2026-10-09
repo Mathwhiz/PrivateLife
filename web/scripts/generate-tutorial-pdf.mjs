@@ -433,7 +433,7 @@ cd PrivateLife/web</pre>
   </div>
 
   <div class="note">
-    <strong>¿Para qué sirve esto?</strong> El RLS (Row Level Security) hace que nadie pueda ver ni modificar tus datos sin haber iniciado sesión primero. Es la capa de seguridad más importante de toda la app.
+    <strong>¿Para qué sirve esto?</strong> El RLS (Row Level Security) hace que sólo los usuarios que habilites como dueños (Paso 5) puedan ver o modificar tus datos. Tener una sesión iniciada no alcanza. Es la capa de seguridad más importante de toda la app.
   </div>
 
   <div class="warning">
@@ -459,6 +459,24 @@ cd PrivateLife/web</pre>
     <div class="step-body">
       <h3>Crear el usuario</h3>
       <p>Click en <strong>Add user</strong> → <strong>Create new user</strong>. Ingresá tu email y la contraseña que quieras usar para entrar a la app. Guardá esas credenciales — las vas a necesitar para iniciar sesión.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Habilitarte como dueño</h3>
+      <p>En el <strong>SQL Editor</strong>, ejecutá esto con tu email. Sin este paso la base no te devuelve nada:</p>
+      <pre>INSERT INTO public.private_life_owners (user_id)
+SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Cerrar el registro</h3>
+      <p><strong>Authentication</strong> → <strong>Sign In / Providers</strong> → desactivá <strong>Allow new users to sign up</strong>. Así nadie más puede crearse una cuenta en tu proyecto.</p>
     </div>
   </div>
 
@@ -575,7 +593,7 @@ cd PrivateLife/web</pre>
     </tr>
     <tr>
       <td>5</td>
-      <td>Crear tu usuario</td>
+      <td>Crear tu usuario, habilitarte como dueño y cerrar el registro</td>
       <td>Supabase → Authentication</td>
     </tr>
     <tr>

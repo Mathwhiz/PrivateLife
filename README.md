@@ -63,7 +63,13 @@ npm install
 1. Crear un nuevo proyecto en [supabase.com](https://supabase.com)
 2. **SQL Editor → New query** → pegar y ejecutar `web/supabase/schema.sql`
 3. **SQL Editor → New query** → pegar y ejecutar `web/supabase/rls.sql`
-4. **Authentication → Providers → Google** → habilitar Google OAuth y configurar Client ID / Secret
+4. **Authentication → Users → Add user** → crear tu usuario (email y contraseña)
+5. **SQL Editor** → habilitarte como dueño (sin esto la base no te devuelve nada):
+   ```sql
+   INSERT INTO public.private_life_owners (user_id)
+   SELECT id FROM auth.users WHERE email = 'tu@email.com';
+   ```
+6. **Authentication → Sign In / Providers** → desactivar *Allow new users to sign up*
 
 ### 3. Credenciales
 
@@ -90,8 +96,9 @@ Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión.
 
 - Sin credenciales hardcodeadas en el repositorio
 - `.env.local` está en `.gitignore`
-- RLS activo: sin sesión iniciada, la base de datos no devuelve nada
-- Autenticación con Google OAuth via Supabase Auth
+- RLS activo: sólo los usuarios de `private_life_owners` leen o escriben; cualquier otra sesión no ve nada
+- Registro público desactivado: las cuentas se crean a mano desde Supabase
+- Autenticación con email y contraseña vía Supabase Auth
 
 ---
 
