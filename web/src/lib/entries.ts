@@ -68,6 +68,9 @@ export type MediaFormState = {
   date: string;
   rating: string;
   tags: string;
+  release_year: string;
+  cover_url: string;
+  external: LifeEntry["external"] | null;
 };
 
 export const defaultType: EntryType = "memory";
@@ -97,13 +100,19 @@ export function defaultMediaForm(type: EntryType = "movie"): MediaFormState {
     date: todayAR(),
     rating: "",
     tags: "",
+    release_year: "",
+    cover_url: "",
+    external: null,
   };
 }
 
+/** Tags de importacion/sistema: no se muestran en el formulario pero se conservan. */
+export function isHiddenMediaTag(tag: string) {
+  return systemMediaTags.has(tag) || tag.includes("import");
+}
+
 export function entryToMediaForm(entry: LifeEntry): MediaFormState {
-  const cleanTags = entry.tags.filter(
-    (t) => !systemMediaTags.has(t) && !t.includes("import"),
-  );
+  const cleanTags = entry.tags.filter((t) => !isHiddenMediaTag(t));
   return {
     id: entry.id,
     type: entry.type,
@@ -112,7 +121,43 @@ export function entryToMediaForm(entry: LifeEntry): MediaFormState {
     date: entry.date,
     rating: entry.rating !== undefined && entry.rating !== null ? `${entry.rating}` : "",
     tags: cleanTags.join(", "),
+    release_year: entry.release_year ?? "",
+    cover_url: entry.cover_url ?? "",
+    external: entry.external ?? null,
   };
+}
+
+/**
+ * Arma la entrada a guardar desde el formulario. Parte de la entrada existente
+ * para no perder lo que el formulario no muestra (playtime_hours, steam_appid,
+ * tags de importacion, ...).
+ */
+export function mediaFormToEntry(form: MediaFormState, id: string, existing?: LifeEntry): LifeEntry {
+  const formTags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+  const hiddenTags = (existing?.tags ?? []).filter((t) => isHiddenMediaTag(t) && !formTags.includes(t));
+  const rating = form.rating.trim();
+  const year = form.release_year.trim();
+  const cover = form.cover_url.trim();
+
+  const next: LifeEntry = {
+    ...existing,
+    id,
+    type: form.type,
+    section: form.type as EntrySection,
+    title: form.title.trim(),
+    content: form.content.trim(),
+    date: form.date,
+    tags: [...hiddenTags, ...formTags],
+    rating: rating || undefined,
+    release_year: year || undefined,
+    cover_url: cover || undefined,
+    external: form.external ?? undefined,
+  };
+  // Sin claves undefined en el payload.
+  for (const key of ["rating", "release_year", "cover_url", "external"] as const) {
+    if (next[key] === undefined) delete next[key];
+  }
+  return next;
 }
 
 export function formatDate(date: string) {

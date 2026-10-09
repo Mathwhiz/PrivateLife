@@ -14,7 +14,7 @@ import {
 import { getSession, onAuthStateChange } from "@/lib/auth";
 import { LoginScreen } from "@/components/login-screen";
 import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
-import { FormState, HabitDraft, HabitStats, HabitViewMode, MediaFormState, daysBetween, defaultFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, isHabitLogEntry, isHabitTemplateEntry, isHiddenHabitTemplateEntry, makeEntryId, mediaTypes, normalizeHabitTitle, normalizeSection, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
+import { FormState, HabitDraft, HabitStats, HabitViewMode, MediaFormState, daysBetween, defaultFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, isHabitLogEntry, isHabitTemplateEntry, isHiddenHabitTemplateEntry, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, normalizeSection, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
 import { ArchiveView } from "@/components/views/archive-view";
 import { CaptureView } from "@/components/views/capture-view";
 import { HabitsView } from "@/components/views/habits-view";
@@ -695,21 +695,8 @@ export function PrivateLifeApp() {
       ? makeEntryId(mediaForm.type, mediaForm.date, mediaForm.title)
       : mediaForm.id;
 
-    const parsedRating = mediaForm.rating.trim() !== "" ? mediaForm.rating.trim() : undefined;
-
-    const next: LifeEntry = {
-      id,
-      type: mediaForm.type,
-      section: mediaForm.type as EntrySection,
-      title: mediaForm.title.trim(),
-      content: mediaForm.content.trim(),
-      date: mediaForm.date,
-      tags: mediaForm.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-      ...(parsedRating !== undefined ? { rating: parsedRating } : {}),
-    };
+    const existing = isNew ? undefined : entries.find((e) => e.id === id);
+    const next = mediaFormToEntry(mediaForm, id, existing);
 
     if (isNew) {
       setEntries((current) => [next, ...current]);

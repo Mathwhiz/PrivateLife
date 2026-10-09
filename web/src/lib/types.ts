@@ -22,6 +22,8 @@ export type EntrySection =
   | "manga"
   | "game";
 
+export type ExternalSource = "tmdb" | "anilist" | "openlibrary" | "steam";
+
 export type LifeEntry = {
   id: string;
   type: EntryType;
@@ -31,6 +33,13 @@ export type LifeEntry = {
   tags: string[];
   section?: EntrySection;
   rating?: number | string;
+  // Solo biblioteca. Todos opcionales: las entradas viejas no los tienen.
+  release_year?: string;
+  cover_url?: string;
+  /** De donde salio la tapa: tmdb usa "movie/123" o "tv/123"; el resto, su id. */
+  external?: { source: ExternalSource; id: string };
+  playtime_hours?: number;
+  steam_appid?: number;
 };
 
 export const entryTypeLabels: Record<EntryType, string> = {
