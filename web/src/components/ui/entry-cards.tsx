@@ -1,4 +1,5 @@
 import { entrySectionLabels, entryTypeLabels, type LifeEntry } from "@/lib/types";
+import { Cover } from "@/components/ui/cover";
 import { compactMeta, excerptText, formatDate, getDisplayRating, getRatingBadgeClass, getReactionBadge, normalizeSection } from "@/lib/entries";
 
 export function MediaCard({
@@ -20,32 +21,48 @@ export function MediaCard({
       : null;
 
   return (
-    <article className="rounded-xl border border-border bg-panel px-4 py-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1.5">
-          <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
-            {entryTypeLabels[entry.type]} · {formatDate(entry.date)}{exactness ? ` · ${exactness}` : ""}
-          </p>
-          <h3 className="text-base font-medium tracking-[-0.02em] text-foreground">{entry.title}</h3>
+    <article className="flex gap-3 rounded-xl border border-border bg-panel px-3 py-3 sm:px-4 sm:py-4">
+      <Cover
+        src={entry.cover_url}
+        type={entry.type}
+        title={entry.title}
+        className="w-16 sm:w-20"
+        sizes="(min-width: 640px) 80px, 64px"
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
+              {entryTypeLabels[entry.type]} · {formatDate(entry.date)}{exactness ? ` · ${exactness}` : ""}
+            </p>
+            <h3 className="text-base font-medium tracking-[-0.02em] text-foreground">
+              {entry.title}
+              {entry.release_year ? (
+                <span className="ml-1.5 text-sm font-normal text-muted">{entry.release_year}</span>
+              ) : null}
+            </h3>
+          </div>
+          {display ? <span className={badgeClass}>{display}</span> : null}
         </div>
-        {display ? <span className={badgeClass}>{display}</span> : null}
-      </div>
-      {meta.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {meta.map((item) => (
-            <span key={`${entry.id}-${item}`} className="meta-chip">
-              {item}
-            </span>
-          ))}
+        {meta.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {meta.map((item) => (
+              <span key={`${entry.id}-${item}`} className="meta-chip">
+                {item}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {/* Empuja las acciones abajo cuando la tapa es mas alta que el texto. */}
+        <div className="flex-1" />
+        <div className="mt-3 flex gap-1.5 border-t border-border pt-3">
+          <button type="button" className="habit-inline-link" onClick={onEdit}>
+            Editar
+          </button>
+          <button type="button" className="habit-inline-link" onClick={onDelete}>
+            Eliminar
+          </button>
         </div>
-      ) : null}
-      <div className="mt-3 flex gap-1.5 border-t border-border pt-3">
-        <button type="button" className="habit-inline-link" onClick={onEdit}>
-          Editar
-        </button>
-        <button type="button" className="habit-inline-link" onClick={onDelete}>
-          Eliminar
-        </button>
       </div>
     </article>
   );

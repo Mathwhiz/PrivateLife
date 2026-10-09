@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ChangeEvent, Dispatch, RefObject, SetStateAction } from "react";
 import { signOut as authSignOut } from "@/lib/auth";
 import { ViewHeader } from "@/components/ui/common";
@@ -195,6 +196,31 @@ export function SettingsView({
                     ))}
                   </div>
                 </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-panel px-4 py-5">
+                <p className="section-kicker">Creditos</p>
+                <div className="mt-3 flex flex-wrap items-center gap-4">
+                  <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="shrink-0">
+                    <Image
+                      src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg"
+                      alt="The Movie Database (TMDB)"
+                      width={120}
+                      height={16}
+                      unoptimized
+                    />
+                  </a>
+                  <p className="min-w-0 flex-1 text-sm text-muted">
+                    This product uses the TMDB API but is not endorsed or certified by TMDB.
+                  </p>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-muted">
+                  Tapas y datos de películas y series: TMDB. Anime y manga:{" "}
+                  <a href="https://anilist.co" target="_blank" rel="noopener noreferrer" className="underline">AniList</a>.
+                  Libros:{" "}
+                  <a href="https://openlibrary.org" target="_blank" rel="noopener noreferrer" className="underline">Open Library</a>.
+                  Videojuegos: Steam.
+                </p>
               </div>
 
               <div className="rounded-xl border border-border bg-panel px-4 py-5">

@@ -88,6 +88,7 @@ export function LibraryView({
 
               {mediaForm !== null ? (
                 <MediaEditorForm
+                  key={mediaForm.id || "nueva"}
                   form={mediaForm}
                   onChange={(updates) =>
                     setMediaForm((current) => (current ? { ...current, ...updates } : current))
