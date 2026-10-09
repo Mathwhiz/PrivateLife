@@ -1,6 +1,6 @@
 // Buscador de metadatos para la biblioteca (tapa, año, géneros, id externo).
 // Normaliza TMDB, AniList, Open Library y la tienda de Steam a un mismo formato:
-//   { fuente, id_externo, titulo, titulos_alt, anio, tapa_url, generos, autor? }
+//   { fuente, id_externo, titulo, titulos_alt, anio, tapa_url, generos, autor?, votos? }
 //
 // Uso:  GET  /functions/v1/metadatos?tipo=movie&q=Margin%20Call&anio=2011
 //       POST /functions/v1/metadatos  { "tipo": "game", "appid": 730 }
@@ -18,6 +18,8 @@ type Resultado = {
   tapa_url: string | null;
   generos: string[];
   autor?: string;
+  /** Solo TMDB: sirve para desempatar títulos repetidos (un corto vs. la película). */
+  votos?: number;
 };
 
 const MAX = 8;
@@ -94,6 +96,7 @@ async function buscarTmdb(clase: "movie" | "tv", q: string, year: string | null)
     anio: anio(m.release_date ?? m.first_air_date),
     tapa_url: m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null,
     generos: (m.genre_ids ?? []).map((id: number) => generos.get(id)).filter(Boolean),
+    votos: m.vote_count ?? 0,
   }));
 }
 
@@ -117,14 +120,18 @@ const QUERY_ANILIST = `query ($q: String, $tipo: MediaType) {
 
 // Los títulos de JKAnime vienen en romaji o en español y a veces con la temporada
 // pegada: si la búsqueda literal no encuentra nada, probamos versiones recortadas.
+// AniList busca casi palabra por palabra ("Russia-go" no encuentra "Rossiya-go"),
+// así que el último intento son las primeras palabras, que suelen ser únicas.
 function variantesAnime(q: string) {
-  const sinTemporada = q
+  const limpio = q.replace(/\s*\((TV|OVA|ONA)\)/gi, "").trim();
+  const sinTemporada = limpio
     .replace(/\b(\d+(st|nd|rd|th)|second|third|fourth|final)\s+season\b.*$/i, "")
     .replace(/\b(season|temporada|part|parte|cour)\s*\d+.*$/i, "")
-    .replace(/\s+(II|III|IV|V|\d)\s*$/i, "")
+    .replace(/\s+(S\d+|II|III|IV|V|\d)(\s+OVA)?\s*$/i, "")
     .trim();
-  const antesDeDosPuntos = q.split(/[:：]/)[0].trim();
-  return unicos([q, sinTemporada, antesDeDosPuntos]).filter((v) => v.length >= 2);
+  const antesDeDosPuntos = sinTemporada.split(/[:：,]/)[0].trim();
+  const primerasPalabras = antesDeDosPuntos.split(/\s+/).slice(0, 3).join(" ");
+  return unicos([q, limpio, sinTemporada, antesDeDosPuntos, primerasPalabras]).filter((v) => v.length >= 3);
 }
 
 async function buscarAnilist(tipo: "ANIME" | "MANGA", q: string): Promise<Resultado[]> {

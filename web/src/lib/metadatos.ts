@@ -11,6 +11,7 @@ export type ResultadoMetadatos = {
   tapa_url: string | null;
   generos: string[];
   autor?: string;
+  votos?: number;
 };
 
 export const fuenteLabels: Record<ExternalSource, string> = {
