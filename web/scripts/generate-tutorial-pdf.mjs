@@ -268,6 +268,8 @@ const html = `<!DOCTYPE html>
     margin-right: 4px;
   }
 
+  .step, .note, .warning, pre, .summary tr { break-inside: avoid; }
+
   .divider {
     height: 1px;
     background: #f0ece6;
@@ -308,7 +310,7 @@ const html = `<!DOCTYPE html>
 
   <div class="step">
     <div class="step-body">
-      <p>PrivateLife es una aplicación web personal — un segundo cerebro para registrar hábitos, biblioteca de libros/series/películas, escritos, hitos y más. Cada persona tiene su propia instancia con sus propios datos, completamente privados.</p>
+      <p>PrivateLife es una aplicación web personal — un segundo cerebro para registrar hábitos, biblioteca de películas, series, libros, anime y videojuegos (con sus tapas), escritos, hitos y más. Cada persona tiene su propia instancia con sus propios datos, completamente privados.</p>
       <p>La app está construida con <strong>Next.js + React + TypeScript</strong> y usa <strong>Supabase</strong> como base de datos en la nube. No hay servidor propio: Supabase se encarga de todo el backend.</p>
     </div>
   </div>
@@ -560,7 +562,42 @@ SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;
   </div>
 </div>
 
-<!-- ══ PAGE 6: Resumen + FAQ ══════════════════════════════════════ -->
+<!-- ══ PAGE 6: Tapas (opcional) ══════════════════════════════════ -->
+<div class="page">
+  <div class="section-num">Paso 9 · Opcional</div>
+  <div class="section-title">Tapas automáticas en la biblioteca</div>
+
+  <div class="step">
+    <div class="step-body">
+      <p>En el formulario de la biblioteca hay un botón <strong>Buscar</strong> que completa tapa, año y géneros sugeridos. Anime, manga, libros y videojuegos funcionan sin cuenta; películas y series usan TMDB, que pide un token gratuito. La búsqueda corre en una función de Supabase, así el token nunca llega al navegador.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Pedir el token de TMDB</h3>
+      <p>Creá una cuenta en <strong>themoviedb.org</strong> → Settings → API y copiá el <strong>API Read Access Token</strong> (el largo).</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Subir la función y el token</h3>
+      <p>Con la <strong>CLI de Supabase</strong> vinculada a tu proyecto (<code>npx supabase login</code> y <code>npx supabase link</code>), desde <code>PrivateLife/web/</code>:</p>
+      <pre>npx supabase functions deploy metadatos --no-verify-jwt
+npx supabase secrets set TMDB_TOKEN=<span class="val">tu_token</span></pre>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Nota:</strong> <code>--no-verify-jwt</code> no la deja abierta: la función revisa por su cuenta que tengas la sesión iniciada.
+  </div>
+
+</div>
+
+<!-- ══ PAGE 7: Resumen + Datos ═══════════════════════════════════ -->
 <div class="page">
   <div class="section-num">Resumen</div>
   <div class="section-title">Checklist completo</div>
@@ -611,10 +648,31 @@ SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;
       <td>Correr <code>npm run dev</code> y entrar</td>
       <td>Terminal + localhost:3000</td>
     </tr>
+    <tr>
+      <td>9</td>
+      <td>Opcional: función de tapas y token de TMDB</td>
+      <td>Terminal (CLI de Supabase)</td>
+    </tr>
   </table>
 
   <div class="divider"></div>
 
+  <div class="section-num">Datos</div>
+  <div class="section-title">Exportar e importar</div>
+
+  <div class="step">
+    <div class="step-body">
+      <p>Desde <strong>Ajustes → Exportar datos</strong> descargás un archivo JSON con todas tus entradas. Podés usarlo como backup o para migrar a otra instancia importándolo con <strong>Ajustes → Importar datos</strong>.</p>
+    </div>
+  </div>
+
+  <div class="warning">
+    <strong>Ojo:</strong> importar <strong>reemplaza</strong> todas las entradas actuales por las del archivo. Exportá un backup antes de importar.
+  </div>
+</div>
+
+<!-- ══ PAGE 8: FAQ + Secciones ═══════════════════════════════════ -->
+<div class="page">
   <div class="section-num">Preguntas frecuentes</div>
   <div class="section-title">FAQ</div>
 
@@ -645,10 +703,9 @@ SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;
       <p>Podés cambiarla desde el dashboard de Supabase → Authentication → Users → hacé click en tu usuario → Update password.</p>
     </div>
   </div>
-</div>
 
-<!-- ══ PAGE 7: Funcionalidades + Personalización ══════════════════ -->
-<div class="page">
+  <div class="divider"></div>
+
   <div class="section-num">Referencia rápida</div>
   <div class="section-title">Secciones de la app</div>
 
@@ -663,7 +720,7 @@ SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;
     </tr>
     <tr>
       <td>Biblioteca</td>
-      <td>Películas, series, libros, anime y manga con rating, géneros y filtros</td>
+      <td>Películas, series, libros, anime, manga y videojuegos con tapa, rating, géneros y filtros</td>
     </tr>
     <tr>
       <td>Textos</td>
@@ -682,9 +739,10 @@ SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;
       <td>Exportar/importar datos, configurar menú y biblioteca</td>
     </tr>
   </table>
+</div>
 
-  <div class="divider"></div>
-
+<!-- ══ PAGE 9: Biblioteca + Personalización ═════════════════════ -->
+<div class="page">
   <div class="section-num">Biblioteca</div>
   <div class="section-title">Filtros y orden</div>
 
@@ -692,11 +750,12 @@ SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;
     <div class="step-body">
       <p>En la biblioteca podés combinar filtros y orden libremente:</p>
       <ul class="checklist">
-        <li><strong>Tipo:</strong> Todo / Película / Serie / Libro / Anime / Manga</li>
+        <li><strong>Tipo:</strong> Todo / Película / Serie / Libro / Anime / Manga / Videojuego</li>
         <li><strong>Rating:</strong> Todas / 8+ / 9+ / 10</li>
         <li><strong>Orden:</strong> Más reciente · Más antigua · Nota ↓ · Nota ↑</li>
         <li><strong>Géneros:</strong> Filtro dinámico basado en los tags que cargaste</li>
         <li><strong>Búsqueda:</strong> Por nombre en tiempo real</li>
+        <li><span><strong>Tapas:</strong> en el formulario, <strong>Buscar</strong> trae resultados con miniatura; al elegir uno se completan tapa y año y se sugieren géneros. Todo se puede editar a mano (ver Paso 9).</span></li>
       </ul>
     </div>
   </div>
@@ -726,16 +785,6 @@ SELECT id FROM auth.users WHERE email = <span class="val">'tu@email.com'</span>;
     <strong>Importante:</strong> La configuración se guarda en el navegador (localStorage). Si usás la app en otro dispositivo, la configuración es independiente en cada uno.
   </div>
 
-  <div class="divider"></div>
-
-  <div class="section-num">Datos</div>
-  <div class="section-title">Exportar e importar</div>
-
-  <div class="step">
-    <div class="step-body">
-      <p>Desde <strong>Ajustes → Exportar datos</strong> descargás un archivo JSON con todas tus entradas. Podés usarlo como backup o para migrar a otro dispositivo importándolo con <strong>Ajustes → Importar datos</strong>.</p>
-    </div>
-  </div>
 </div>
 
 </body>

@@ -5,7 +5,7 @@ La app puede empaquetarse como APK usando Capacitor sobre el export estatico de 
 ## Flujo base
 
 1. Instalar Android Studio
-2. Desde [`web`](E:\Privatelife\web) correr:
+2. Desde la carpeta `web` correr:
 
 ```powershell
 npm run android:add
