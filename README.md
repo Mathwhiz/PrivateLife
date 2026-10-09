@@ -11,7 +11,7 @@ Un segundo cerebro personal. Registrá hábitos, biblioteca, escritos, hitos y m
 | Sección | Descripción |
 |---|---|
 | Hábitos | Tracker diario con checklist, historial y estadísticas |
-| Biblioteca | Películas, series, libros, anime, manga — con rating, géneros y filtros |
+| Biblioteca | Películas, series, libros, anime, manga y videojuegos — con tapa, rating, géneros y filtros |
 | Textos | Escritos personales: pensamientos, filosofía, anécdotas |
 | Hitos | Momentos importantes con fecha y contexto |
 | Archivo | Vista global de todas las entradas |
@@ -19,7 +19,8 @@ Un segundo cerebro personal. Registrá hábitos, biblioteca, escritos, hitos y m
 
 ### Biblioteca
 
-- Tipos: Película, Serie, Libro, Anime, Manga
+- Tipos: Película, Serie, Libro, Anime, Manga, Videojuego
+- Tapas: botón **Buscar** en el formulario que completa tapa, año y géneros sugeridos (TMDB, AniList, Open Library y Steam); todo sigue siendo editable a mano
 - Filtros por tipo, género, rating (8+, 9+, 10)
 - Orden: más reciente, más antigua, nota ↓, nota ↑
 - Búsqueda por nombre
@@ -90,6 +91,17 @@ npm run dev
 
 Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión.
 
+### 5. Tapas automáticas (opcional)
+
+El buscador de tapas corre en una Edge Function de Supabase, así el token de TMDB nunca llega al navegador. Con la [CLI de Supabase](https://supabase.com/docs/guides/cli) vinculada al proyecto, desde `web/`:
+
+```bash
+npx supabase functions deploy metadatos --no-verify-jwt
+npx supabase secrets set TMDB_TOKEN=<API Read Access Token de TMDB>
+```
+
+El token se saca gratis en [themoviedb.org](https://www.themoviedb.org/settings/api). Sin él, la búsqueda de películas y series no anda; anime, manga, libros y juegos no necesitan cuenta. La función solo responde a sesiones iniciadas (valida el JWT por su cuenta, por eso `--no-verify-jwt`).
+
 ---
 
 ## Seguridad
@@ -99,6 +111,7 @@ Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión.
 - RLS activo: sólo los usuarios de `private_life_owners` leen o escriben; cualquier otra sesión no ve nada
 - Registro público desactivado: las cuentas se crean a mano desde Supabase
 - Autenticación con email y contraseña vía Supabase Auth
+- Claves de APIs externas (TMDB) como secrets de Supabase, nunca en el bundle
 
 ---
 
