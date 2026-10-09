@@ -219,7 +219,8 @@ export function SettingsView({
                   <a href="https://anilist.co" target="_blank" rel="noopener noreferrer" className="underline">AniList</a>.
                   Libros:{" "}
                   <a href="https://openlibrary.org" target="_blank" rel="noopener noreferrer" className="underline">Open Library</a>.
-                  Videojuegos: Steam.
+                  Videojuegos: Steam y{" "}
+                  <a href="https://www.wikipedia.org" target="_blank" rel="noopener noreferrer" className="underline">Wikipedia</a>.
                 </p>
               </div>
 

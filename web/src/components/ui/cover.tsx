@@ -21,6 +21,9 @@ export function Cover({
 }) {
   // Guardamos QUE url fallo: si despues cambia la tapa, se vuelve a intentar.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  // Logos y headers de Steam son apaisados: recortados a 2:3 no se reconocen,
+  // asi que esos se muestran enteros.
+  const [wideSrc, setWideSrc] = useState<string | null>(null);
   const showImage = !!src && failedSrc !== src;
 
   return (
@@ -34,7 +37,11 @@ export function Cover({
           fill
           sizes={sizes}
           loading="lazy"
-          className="object-cover"
+          className={wideSrc === src ? "object-contain p-1" : "object-cover"}
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (img.naturalWidth > img.naturalHeight) setWideSrc(src);
+          }}
           onError={() => setFailedSrc(src)}
         />
       ) : (

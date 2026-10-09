@@ -22,7 +22,7 @@ export type EntrySection =
   | "manga"
   | "game";
 
-export type ExternalSource = "tmdb" | "anilist" | "openlibrary" | "steam";
+export type ExternalSource = "tmdb" | "anilist" | "openlibrary" | "steam" | "wikipedia";
 
 export type LifeEntry = {
   id: string;

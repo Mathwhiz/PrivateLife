@@ -19,6 +19,7 @@ export const fuenteLabels: Record<ExternalSource, string> = {
   anilist: "AniList",
   openlibrary: "Open Library",
   steam: "Steam",
+  wikipedia: "Wikipedia",
 };
 
 /** Busca en la fuente que corresponde al tipo. Pasa por Supabase con tu sesión. */
