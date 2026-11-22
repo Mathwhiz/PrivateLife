@@ -1,7 +1,7 @@
 import { Cover } from "@/components/ui/cover";
 import { TypeBadge } from "@/components/ui/common";
 import { Sheet } from "@/components/ui/quick-add";
-import { formatDate, getDisplayRating, getRatingBadgeClass, systemMediaTags } from "@/lib/entries";
+import { formatDate, getDisplayRating, getRatingBadgeClass, isPendiente, systemMediaTags } from "@/lib/entries";
 import { type LifeEntry } from "@/lib/types";
 
 const generosDe = (entry: LifeEntry) => entry.tags.filter((t) => !systemMediaTags.has(t) && !t.includes("import"));
@@ -33,11 +33,14 @@ export function MediaFicha({
   onClose,
   onEdit,
   onDelete,
+  onYaLaVi,
 }: {
   entry: LifeEntry;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Solo en "Quiero ver": pasa a vista con la fecha de hoy y abre el editor para poner nota. */
+  onYaLaVi?: () => void;
 }) {
   const nota = getDisplayRating(entry);
   const generos = generosDe(entry);
@@ -52,7 +55,7 @@ export function MediaFicha({
           {entry.release_year ? <p className="text-sm text-muted">{entry.release_year}</p> : null}
           {nota ? <span className={getRatingBadgeClass(entry)}>{nota}</span> : null}
           <p className="text-sm text-muted">
-            {entry.type === "game" ? "Jugado" : entry.type === "book" || entry.type === "manga" ? "Leído" : "Visto"}:{" "}
+            {isPendiente(entry) ? "Anotado" : entry.type === "game" ? "Jugado" : entry.type === "book" || entry.type === "manga" ? "Leído" : "Visto"}:{" "}
             {aprox ? `${entry.date.slice(0, 4)} (aprox.)` : formatDate(entry.date)}
           </p>
           {entry.playtime_hours ? <p className="text-sm text-muted">{entry.playtime_hours} h jugadas</p> : null}
@@ -75,9 +78,16 @@ export function MediaFicha({
         <button type="button" className="danger-button" onClick={onDelete}>
           Eliminar
         </button>
-        <button type="button" className="primary-button" onClick={onEdit}>
-          Editar
-        </button>
+        <div className="flex gap-2">
+          <button type="button" className={onYaLaVi ? "secondary-button" : "primary-button"} onClick={onEdit}>
+            Editar
+          </button>
+          {onYaLaVi ? (
+            <button type="button" className="primary-button" onClick={onYaLaVi}>
+              {entry.type === "game" ? "Ya lo jugué" : entry.type === "book" || entry.type === "manga" ? "Ya lo leí" : "Ya la vi"}
+            </button>
+          ) : null}
+        </div>
       </div>
     </Sheet>
   );

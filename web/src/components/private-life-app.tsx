@@ -14,7 +14,7 @@ import {
 import { getSession, onAuthStateChange } from "@/lib/auth";
 import { LoginScreen } from "@/components/login-screen";
 import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
-import { HabitDraft, HabitViewMode, daysBetween, MediaFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
+import { HabitDraft, HabitViewMode, daysBetween, isPendiente, MediaFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
 import { useHabits } from "@/lib/use-habits";
 import { useRegistroSalud } from "@/lib/use-registro-salud";
 import { HabitsView } from "@/components/views/habits-view";
@@ -23,6 +23,7 @@ import { LibraryView } from "@/components/views/library-view";
 import { SaludView } from "@/components/views/salud-view";
 import { SettingsView } from "@/components/views/ajustes-view";
 import { VidaView } from "@/components/views/vida-view";
+import { ResumenView } from "@/components/views/resumen-view";
 import { SearchOverlay } from "@/components/ui/search-overlay";
 import { QuickAddChooser, QuickEntryForm, draftToEntry, entryToDraft, newDraft, type QuickDraft } from "@/components/ui/quick-add";
 import {
@@ -59,6 +60,7 @@ export function PrivateLifeApp() {
   const [mediaForm, setMediaForm] = useState<MediaFormState | null>(null);
   const [ratingFilter, setRatingFilter] = useState<"all" | "8" | "9" | "10">("all");
   const [librarySearch, setLibrarySearch] = useState("");
+  const [showPendientes, setShowPendientes] = useState(false);
   const [librarySort, setLibrarySort] = useState<"date-desc" | "date-asc" | "rating-desc" | "rating-asc">("date-desc");
   const [appConfig, setAppConfig] = useState<AppConfig>(() => loadConfig());
   const [importMessage, setImportMessage] = useState<string>("");
@@ -223,7 +225,8 @@ export function PrivateLifeApp() {
     [lifeEntries],
   );
 
-  const salud = useRegistroSalud(isHydrated && !SANDBOX);
+  // En modo prueba no hay Supabase: muestra lo cacheado y el aviso de que no pudo actualizar.
+  const salud = useRegistroSalud(isHydrated);
 
   const mediaEntries = useMemo(
     () => sortEntries(normalizedEntries.filter((entry) => mediaTypes.includes(entry.type))),
@@ -250,11 +253,15 @@ export function PrivateLifeApp() {
     }
   }, [genreFilter, mediaGenres]);
 
+  const pendientesCount = useMemo(() => mediaEntries.filter(isPendiente).length, [mediaEntries]);
+
   const visibleMedia = useMemo(() => {
+    // "Quiero ver" es una lista aparte: no se mezcla con lo que ya viste.
+    const scoped = mediaEntries.filter((entry) => isPendiente(entry) === showPendientes);
     const byType =
       libraryFilter === "all-media"
-        ? mediaEntries
-        : mediaEntries.filter((entry) => entry.type === libraryFilter);
+        ? scoped
+        : scoped.filter((entry) => entry.type === libraryFilter);
 
     const searchNorm = librarySearch.trim().toLowerCase();
 
@@ -289,7 +296,7 @@ export function PrivateLifeApp() {
           return b.date.localeCompare(a.date);
       }
     });
-  }, [genreFilter, libraryFilter, librarySearch, librarySort, mediaEntries, ratingFilter]);
+  }, [genreFilter, libraryFilter, librarySearch, librarySort, mediaEntries, ratingFilter, showPendientes]);
 
   function createEntry(nextEntry: LifeEntry) {
     setEntries((current) => [nextEntry, ...current]);
@@ -458,19 +465,21 @@ export function PrivateLifeApp() {
     setUndoDelete(null);
   }
 
-  function openMediaEditor(entry?: LifeEntry) {
+  function openMediaEditor(entry?: LifeEntry, overrides?: Partial<MediaFormState>) {
     if (entry) {
-      setMediaForm(entryToMediaForm(entry));
+      setMediaForm({ ...entryToMediaForm(entry), ...overrides });
     } else {
       const type = libraryFilter === "all-media" ? "movie" : (libraryFilter as EntryType);
-      setMediaForm(defaultMediaForm(type));
+      // Desde "Quiero ver", lo nuevo nace pendiente.
+      setMediaForm({ ...defaultMediaForm(type), pending: showPendientes, ...overrides });
     }
   }
 
-  function openNewMedia(type: EntryType) {
+  function openNewMedia(type: EntryType, pending = false) {
     setQuick(null);
     setLibraryFilter(type);
-    setMediaForm(defaultMediaForm(type));
+    setShowPendientes(pending);
+    setMediaForm({ ...defaultMediaForm(type), pending });
     setActiveView("library");
   }
 
@@ -478,6 +487,7 @@ export function PrivateLifeApp() {
   function openEntry(entry: LifeEntry) {
     setSearchOpen(false);
     if (mediaTypes.includes(entry.type)) {
+      setShowPendientes(isPendiente(entry));
       setMediaForm(entryToMediaForm(entry));
       setActiveView("library");
       return;
@@ -498,6 +508,11 @@ export function PrivateLifeApp() {
     setEntries((current) => (existing ? current.map((e) => (e.id === next.id ? next : e)) : [next, ...current]));
     setQuick(null);
   }
+
+  // Cada sección arranca desde arriba.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activeView]);
 
   // Ctrl/Cmd+K abre la búsqueda desde cualquier pantalla.
   useEffect(() => {
@@ -785,10 +800,15 @@ export function PrivateLifeApp() {
               setMediaForm={setMediaForm}
               setRatingFilter={setRatingFilter}
               visibleMedia={visibleMedia}
+              showPendientes={showPendientes}
+              setShowPendientes={setShowPendientes}
+              pendientesCount={pendientesCount}
             />
           ) : null}
 
-          {activeView === "vida" ? <VidaView entries={vidaEntries} openEntry={openEntry} /> : null}
+          {activeView === "vida" ? <VidaView entries={vidaEntries} openEntry={openEntry} verResumen={() => setActiveView("resumen")} /> : null}
+
+          {activeView === "resumen" ? <ResumenView entries={normalizedEntries} dias={salud.dias} openEntry={openEntry} /> : null}
 
           {activeView === "ajustes" ? (
             <SettingsView
@@ -819,6 +839,7 @@ export function PrivateLifeApp() {
           onClose={() => setQuick(null)}
           onPick={(kind) => setQuick({ step: "form", draft: newDraft(kind) })}
           onPickMedia={openNewMedia}
+          onPickWishlist={() => openNewMedia(libraryFilter === "all-media" ? "movie" : libraryFilter, true)}
           mediaVisible={(type) => appConfig.mediaTypes.find((m) => m.id === type)?.visible ?? true}
         />
       ) : null}

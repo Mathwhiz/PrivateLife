@@ -3,6 +3,7 @@ import { EmptyState, ViewHeader } from "@/components/ui/common";
 import { daysBetween, formatDate, todayAR } from "@/lib/entries";
 import { type DiaSalud, type ItemSalud } from "@/lib/salud";
 import { type RegistroSaludState } from "@/lib/use-registro-salud";
+import { guardarObjetivos, leerObjetivos, promediosSemanales, proyectar, type Objetivos, type Semana } from "@/lib/salud-objetivos";
 
 type SaludViewProps = {
   /** Días con el hábito "Baño" marcado en la app. Es el registro principal de baño. */
@@ -16,6 +17,8 @@ const kg = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, 
 export function SaludView({ banoDates, salud }: SaludViewProps) {
   const { registro, dias, cargando, error, actualizar } = salud;
   const [seleccion, setSeleccion] = useState<string | null>(null);
+  const [objetivos, setObjetivos] = useState<Objetivos>(leerObjetivos);
+  const [editandoObjetivos, setEditandoObjetivos] = useState(false);
   const hoy = todayAR();
 
   // Baño: lo de la app más lo que la planilla tenga y la app no (hoy son un subconjunto).
@@ -33,6 +36,9 @@ export function SaludView({ banoDates, salud }: SaludViewProps) {
     () => dias.filter((d) => d.peso !== null).map((d) => ({ fecha: d.fecha, kg: d.peso! })).reverse(),
     [dias],
   );
+
+  const semanas = useMemo(() => promediosSemanales(pesos), [pesos]);
+  const proyeccion = useMemo(() => proyectar(semanas, objetivos.metaKg), [semanas, objetivos.metaKg]);
 
   const semana = dias.filter((d) => daysBetween(hoy, d.fecha) <= 6 && d.kcalComidas > 0);
   const promedioSemana = semana.length ? semana.reduce((s, d) => s + d.kcalComidas, 0) / semana.length : null;
@@ -116,9 +122,61 @@ export function SaludView({ banoDates, salud }: SaludViewProps) {
             </article>
           </div>
 
-          {pesos.length > 1 ? <GraficoPeso pesos={pesos} /> : null}
+          <section className="rounded-xl border border-border bg-panel px-4 py-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="section-kicker">Objetivo</p>
+              <button type="button" className="text-xs text-muted hover:text-foreground" onClick={() => setEditandoObjetivos((v) => !v)}>
+                {editandoObjetivos ? "Cerrar" : "Editar"}
+              </button>
+            </div>
+            {editandoObjetivos ? (
+              <EditorObjetivos
+                inicial={objetivos}
+                onGuardar={(o) => {
+                  setObjetivos(o);
+                  guardarObjetivos(o);
+                  setEditandoObjetivos(false);
+                }}
+              />
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-3 @3xl:grid-cols-4">
+                <div>
+                  <span className="stat-label">Promedio semana</span>
+                  <span className="stat-value">{semanas.length ? kg(semanas.at(-1)!.kg) : "—"}</span>
+                  <span className="mt-1 block text-xs text-muted">kg · meta {kg(objetivos.metaKg)}</span>
+                </div>
+                <div>
+                  <span className="stat-label">Ritmo</span>
+                  <span className="stat-value">
+                    {proyeccion ? `${proyeccion.kgPorSemana > 0 ? "+" : ""}${proyeccion.kgPorSemana.toLocaleString("es-AR", { maximumFractionDigits: 2 })}` : "—"}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">kg por semana (últimas {proyeccion?.semanasUsadas ?? 0})</span>
+                </div>
+                <div>
+                  <span className="stat-label">Llegarías</span>
+                  <span className="stat-value text-[1.3rem]">
+                    {proyeccion?.llegada
+                      ? new Intl.DateTimeFormat("es-AR", { month: "short", year: "numeric" }).format(new Date(`${proyeccion.llegada}T12:00:00`))
+                      : "—"}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">
+                    {proyeccion?.llegada ? "a este ritmo" : proyeccion ? "a este ritmo no baja" : "faltan semanas con pesaje"}
+                  </span>
+                </div>
+                <div>
+                  <span className="stat-label">Calorías</span>
+                  <span className="stat-value text-[1.3rem]">
+                    {kcal(objetivos.kcalMin)}–{kcal(objetivos.kcalMax)}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">objetivo · mantenimiento ~{kcal(objetivos.mantenimiento)}</span>
+                </div>
+              </div>
+            )}
+          </section>
 
-          <BarrasCalorias dias={dias.slice(0, 14)} activo={diaActivo?.clave ?? null} elegir={setSeleccion} />
+          {pesos.length > 1 ? <GraficoPeso pesos={pesos} semanas={semanas} /> : null}
+
+          <BarrasCalorias dias={dias.slice(0, 14)} activo={diaActivo?.clave ?? null} elegir={setSeleccion} objetivos={objetivos} />
 
           {diaActivo ? (
             <DetalleDia
@@ -135,7 +193,7 @@ export function SaludView({ banoDates, salud }: SaludViewProps) {
   );
 }
 
-function GraficoPeso({ pesos }: { pesos: { fecha: string; kg: number }[] }) {
+function GraficoPeso({ pesos, semanas }: { pesos: { fecha: string; kg: number }[]; semanas: Semana[] }) {
   const [hover, setHover] = useState<number | null>(null);
   // El SVG se dibuja al ancho real: escalado, el texto quedaba ilegible en el celular.
   const caja = useRef<HTMLDivElement | null>(null);
@@ -155,7 +213,14 @@ function GraficoPeso({ pesos }: { pesos: { fecha: string; kg: number }[] }) {
   const t1 = new Date(`${pesos.at(-1)!.fecha}T12:00:00`).getTime();
   const x = (fecha: string) => pad.l + ((new Date(`${fecha}T12:00:00`).getTime() - t0) / Math.max(t1 - t0, 1)) * (W - pad.l - pad.r);
   const y = (v: number) => pad.t + ((max - v) / (max - min)) * (H - pad.t - pad.b);
-  const linea = pesos.map((p, i) => `${i ? "L" : "M"}${x(p.fecha).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ");
+  // La línea es el promedio semanal (a mitad de semana); los pesajes diarios quedan como puntos.
+  const mitad = (inicio: string) => {
+    const d = new Date(`${inicio}T12:00:00`);
+    d.setDate(d.getDate() + 3);
+    const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return f > pesos.at(-1)!.fecha ? pesos.at(-1)!.fecha : f < pesos[0].fecha ? pesos[0].fecha : f;
+  };
+  const linea = semanas.map((s, i) => `${i ? "L" : "M"}${x(mitad(s.inicio)).toFixed(1)},${y(s.kg).toFixed(1)}`).join(" ");
   const marcas = Array.from({ length: max - min + 1 }, (_, i) => min + i).filter((v, _, xs) => xs.length <= 6 || v % 2 === 0);
   const fechaCorta = (f: string) => (W < 480 ? formatDate(f).replace(/ de \d{4}|\s\d{4}/, "") : formatDate(f));
   const p = hover !== null ? pesos[hover] : null;
@@ -163,7 +228,7 @@ function GraficoPeso({ pesos }: { pesos: { fecha: string; kg: number }[] }) {
   return (
     <section className="rounded-xl border border-border bg-panel px-4 py-4">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="section-kicker">Peso (kg)</p>
+        <p className="section-kicker">Peso (kg) · línea: promedio semanal</p>
         <p className="text-xs text-muted">{p ? `${formatDate(p.fecha)} · ${kg(p.kg)} kg` : `${pesos.length} pesajes`}</p>
       </div>
       <div ref={caja} className="mt-3">
@@ -192,8 +257,9 @@ function GraficoPeso({ pesos }: { pesos: { fecha: string; kg: number }[] }) {
               cy={y(pp.kg)}
               r={hover === i ? 4.5 : 2.5}
               fill="var(--accent)"
+              opacity={hover === i ? 1 : 0.45}
               stroke="var(--panel)"
-              strokeWidth={2}
+              strokeWidth={hover === i ? 2 : 0}
             />
           </g>
         ))}
@@ -203,13 +269,27 @@ function GraficoPeso({ pesos }: { pesos: { fecha: string; kg: number }[] }) {
   );
 }
 
-function BarrasCalorias({ dias, activo, elegir }: { dias: DiaSalud[]; activo: string | null; elegir: (clave: string) => void }) {
-  const tope = Math.max(...dias.map((d) => d.kcalComidas), 1);
+function BarrasCalorias({
+  dias,
+  activo,
+  elegir,
+  objetivos,
+}: {
+  dias: DiaSalud[];
+  activo: string | null;
+  elegir: (clave: string) => void;
+  objetivos: Objetivos;
+}) {
+  const tope = Math.max(...dias.map((d) => d.kcalComidas), objetivos.mantenimiento * 1.1, 1);
+  const pct = (v: number) => `${(v / tope) * 100}%`;
   return (
     <section className="rounded-xl border border-border bg-panel px-4 py-4">
       <div className="flex items-baseline justify-between gap-3">
         <p className="section-kicker">Calorías por día</p>
-        <p className="text-xs text-muted">Tocá un día para ver el detalle</p>
+        <p className="flex items-center gap-3 text-xs text-muted">
+          <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-3 rounded-sm bg-sage/30" /> objetivo</span>
+          <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-px bg-rose" /> mantenimiento</span>
+        </p>
       </div>
       <div className="mt-3 grid gap-1">
         {dias.map((d) => (
@@ -222,8 +302,13 @@ function BarrasCalorias({ dias, activo, elegir }: { dias: DiaSalud[]; activo: st
             }`}
           >
             <span className="text-muted">{formatDate(d.fecha).replace(/ de \d{4}|\s\d{4}/, "")}</span>
-            <span className="habit-bar-track">
-              <span className="habit-bar-fill" style={{ width: `${(d.kcalComidas / tope) * 100}%` }} />
+            <span className="habit-bar-track !h-2.5">
+              <span
+                className="absolute inset-y-0 bg-sage/25"
+                style={{ left: pct(objetivos.kcalMin), width: `${((objetivos.kcalMax - objetivos.kcalMin) / tope) * 100}%` }}
+              />
+              <span className="habit-bar-fill relative" style={{ width: pct(d.kcalComidas) }} />
+              <span className="absolute inset-y-0 w-px bg-rose" style={{ left: pct(objetivos.mantenimiento) }} />
             </span>
             <span className="text-right text-foreground">
               {d.kcalComidas ? kcal(d.kcalComidas) : "—"}
@@ -312,5 +397,43 @@ function DetalleDia({
         ))}
       </ul>
     </section>
+  );
+}
+
+function EditorObjetivos({ inicial, onGuardar }: { inicial: Objetivos; onGuardar: (o: Objetivos) => void }) {
+  const [o, setO] = useState(inicial);
+  const campo = (clave: keyof Objetivos, label: string, paso: number) => (
+    <label className="grid gap-1.5 text-xs">
+      <span className="font-medium uppercase tracking-wide text-muted">{label}</span>
+      <input
+        type="number"
+        step={paso}
+        className="field"
+        value={o[clave]}
+        onChange={(e) => setO((cur) => ({ ...cur, [clave]: Number(e.target.value) }))}
+      />
+    </label>
+  );
+  return (
+    <form
+      className="mt-3 grid gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onGuardar(o);
+      }}
+    >
+      <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
+        {campo("kcalMin", "Calorías desde", 50)}
+        {campo("kcalMax", "Calorías hasta", 50)}
+        {campo("mantenimiento", "Mantenimiento", 50)}
+        {campo("metaKg", "Meta (kg)", 0.5)}
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-muted">Se guarda en este dispositivo.</span>
+        <button type="submit" className="primary-button">
+          Guardar
+        </button>
+      </div>
+    </form>
   );
 }

@@ -1,5 +1,5 @@
 
-export type AppView = "hoy" | "habits" | "salud" | "library" | "vida" | "ajustes";
+export type AppView = "hoy" | "habits" | "salud" | "library" | "vida" | "resumen" | "ajustes";
 
 // ─── App config (persisted in localStorage) ──────────────────────
 

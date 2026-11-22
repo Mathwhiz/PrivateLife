@@ -100,11 +100,13 @@ const mediaChoices: EntryType[] = ["movie", "series", "anime", "book", "game", "
 export function QuickAddChooser({
   onPick,
   onPickMedia,
+  onPickWishlist,
   onClose,
   mediaVisible,
 }: {
   onPick: (kind: QuickKind) => void;
   onPickMedia: (type: EntryType) => void;
+  onPickWishlist: () => void;
   onClose: () => void;
   mediaVisible: (type: EntryType) => boolean;
 }) {
@@ -125,6 +127,9 @@ export function QuickAddChooser({
             {entryTypeLabels[type]}
           </button>
         ))}
+        <button type="button" className="choice-tile col-span-3" onClick={onPickWishlist}>
+          Quiero ver / jugar / leer
+        </button>
       </div>
     </Sheet>
   );

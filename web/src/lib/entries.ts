@@ -7,6 +7,11 @@ import {
 
 export const habitTemplateTag = "habit-template";
 export const habitHiddenTag = "habit-hidden";
+/** Biblioteca: algo que todavía no viste/jugaste/leíste. La fecha es cuándo lo anotaste. */
+export const QUIERO_VER = "quiero-ver";
+
+export const isPendiente = (entry: LifeEntry) => entry.tags.includes(QUIERO_VER);
+
 export const systemMediaTags = new Set([
   "movie",
   "series",
@@ -32,6 +37,7 @@ export const systemMediaTags = new Set([
   "pausado",
   "pendiente",
   "terminado",
+  QUIERO_VER,
 ]);
 
 export const entryTypes: EntryType[] = ["memory", "habit", "movie", "book", "series", "anime", "manga", "game", "note"];
@@ -84,6 +90,8 @@ export type MediaFormState = {
   release_year: string;
   cover_url: string;
   external: LifeEntry["external"] | null;
+  /** "Quiero ver": todavía pendiente. */
+  pending: boolean;
 };
 
 export const defaultType: EntryType = "memory";
@@ -116,6 +124,7 @@ export function defaultMediaForm(type: EntryType = "movie"): MediaFormState {
     release_year: "",
     cover_url: "",
     external: null,
+    pending: false,
   };
 }
 
@@ -137,6 +146,7 @@ export function entryToMediaForm(entry: LifeEntry): MediaFormState {
     release_year: entry.release_year ?? "",
     cover_url: entry.cover_url ?? "",
     external: entry.external ?? null,
+    pending: isPendiente(entry),
   };
 }
 
@@ -147,7 +157,8 @@ export function entryToMediaForm(entry: LifeEntry): MediaFormState {
  */
 export function mediaFormToEntry(form: MediaFormState, id: string, existing?: LifeEntry): LifeEntry {
   const formTags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
-  const hiddenTags = (existing?.tags ?? []).filter((t) => isHiddenMediaTag(t) && !formTags.includes(t));
+  const hiddenTags = (existing?.tags ?? []).filter((t) => isHiddenMediaTag(t) && !formTags.includes(t) && t !== QUIERO_VER);
+  if (form.pending) hiddenTags.push(QUIERO_VER);
   const rating = form.rating.trim();
   const year = form.release_year.trim();
   const cover = form.cover_url.trim();

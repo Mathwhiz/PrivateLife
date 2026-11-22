@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { formatDate, todayAR } from "@/lib/entries";
+import { formatDate, isPendiente, todayAR } from "@/lib/entries";
 import { type HabitCatalogItem } from "@/lib/use-habits";
 import { type RegistroSaludState } from "@/lib/use-registro-salud";
 import { type LifeEntry } from "@/lib/types";
@@ -25,6 +25,7 @@ function fechasDudosas(entries: LifeEntry[]) {
   for (const e of entries) porFecha.set(e.date, (porFecha.get(e.date) ?? 0) + 1);
   return (e: LifeEntry) =>
     e.tags.includes("approx-date") ||
+    isPendiente(e) ||
     e.tags.includes("childhood") ||
     /-01-0[12]$/.test(e.date) ||
     (porFecha.get(e.date) ?? 0) > 5;
@@ -135,6 +136,18 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
           ) : null}
         </div>
       </div>
+
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-panel px-4 py-4 text-left transition-colors hover:border-accent/40"
+        onClick={() => goTo("resumen")}
+      >
+        <span>
+          <span className="section-kicker">Resumen</span>
+          <span className="mt-1 block text-base font-medium text-foreground">Tu {anio}</span>
+        </span>
+        <span className="text-xs text-muted">Ver ›</span>
+      </button>
 
       <section className="rounded-xl border border-border bg-panel px-4 py-4">
         <p className="section-kicker">Lo último</p>

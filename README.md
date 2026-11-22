@@ -14,7 +14,8 @@ Un segundo cerebro personal. Registrá hábitos, biblioteca, escritos, hitos y m
 | Registro | Lo que hiciste cada día (bueno, malo o juegos): última vez, cada cuánto y un mapa de calor por año |
 | Biblioteca | Películas, series, libros, anime, manga y videojuegos — con tapa, rating, géneros y filtros |
 | Mi vida | Hitos (con fecha de inicio y fin, y un gráfico de períodos), textos y recuerdos en una línea de tiempo |
-| Salud | Comidas, movimiento y peso leídos de una planilla de Google (vía Apps Script + edge function `salud`) |
+| Salud | Comidas, movimiento y peso leídos de una planilla de Google (vía Apps Script + edge function `salud`), con objetivos, peso promedio por semana y proyección a la meta |
+| Resumen del año | Desde Hoy o Mi vida: biblioteca por tipo y por mes, lo mejor (9+), lo que más hiciste, hitos y salud del año |
 
 - **Agregar (+):** botón flotante en el celular y en el menú lateral en escritorio. Formularios cortos para texto, recuerdo e hito; para la biblioteca abre el formulario con búsqueda de tapa.
 - **Buscar:** lupa arriba (o `Ctrl+K`). Busca en todo menos los registros de hábitos, salvo que elijas ese filtro.
@@ -24,6 +25,7 @@ Un segundo cerebro personal. Registrá hábitos, biblioteca, escritos, hitos y m
 
 - Tipos: Película, Serie, Libro, Anime, Manga, Videojuego
 - Tapas: botón **Buscar** en el formulario que completa tapa, año y géneros sugeridos (TMDB, AniList, Open Library y Steam); todo sigue siendo editable a mano
+- **Quiero ver:** lista aparte de pendientes (tag `quiero-ver`); "Ya la vi" la pasa a vista con la fecha de hoy
 - Vista de tapas (grilla) o lista; tocar una tapa abre su ficha con Editar y Eliminar
 - Filtros por tipo, género, rating (8+, 9+, 10)
 - Orden: más reciente, más antigua, nota ↓, nota ↑

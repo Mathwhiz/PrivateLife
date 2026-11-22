@@ -5,7 +5,7 @@ import { MediaCard } from "@/components/ui/entry-cards";
 import { MediaEditorForm } from "@/components/ui/media-editor-form";
 import { type EntryType, type LifeEntry } from "@/lib/types";
 import { type AppConfig } from "@/lib/app-config";
-import { type MediaFormState } from "@/lib/entries";
+import { todayAR, type MediaFormState } from "@/lib/entries";
 
 export type LibrarySort = "date-desc" | "date-asc" | "rating-desc" | "rating-asc";
 export type RatingFilter = "all" | "8" | "9" | "10";
@@ -18,7 +18,7 @@ type LibraryViewProps = {
   librarySort: LibrarySort;
   mediaForm: MediaFormState | null;
   mediaGenres: string[];
-  openMediaEditor: (entry?: LifeEntry) => void;
+  openMediaEditor: (entry?: LifeEntry, overrides?: Partial<MediaFormState>) => void;
   ratingFilter: RatingFilter;
   saveMediaForm: (event: React.FormEvent) => void;
   setGenreFilter: Dispatch<SetStateAction<string>>;
@@ -28,6 +28,9 @@ type LibraryViewProps = {
   setMediaForm: Dispatch<SetStateAction<MediaFormState | null>>;
   setRatingFilter: Dispatch<SetStateAction<RatingFilter>>;
   visibleMedia: LifeEntry[];
+  showPendientes: boolean;
+  setShowPendientes: Dispatch<SetStateAction<boolean>>;
+  pendientesCount: number;
 };
 
 export function LibraryView({
@@ -49,6 +52,9 @@ export function LibraryView({
   setMediaForm,
   setRatingFilter,
   visibleMedia,
+  showPendientes,
+  setShowPendientes,
+  pendientesCount,
 }: LibraryViewProps) {
   const [modo, setModo] = useState<"tapas" | "lista">(() => {
     try {
@@ -117,6 +123,23 @@ export function LibraryView({
                   </div>
                 }
               />
+
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  className={!showPendientes ? "filter-button-active" : "filter-button"}
+                  onClick={() => setShowPendientes(false)}
+                >
+                  Vistas
+                </button>
+                <button
+                  type="button"
+                  className={showPendientes ? "filter-button-active" : "filter-button"}
+                  onClick={() => setShowPendientes(true)}
+                >
+                  Quiero ver{pendientesCount ? ` (${pendientesCount})` : ""}
+                </button>
+              </div>
 
               {mediaForm !== null ? (
                 <MediaEditorForm
@@ -228,7 +251,11 @@ export function LibraryView({
                     }}
                   />
                 ) : (
-                  <EmptyAction label="Todavía no hay nada acá." action="+ Agregar" onAction={() => openMediaEditor()} />
+                  <EmptyAction
+                    label={showPendientes ? "No tenés nada anotado para ver." : "Todavía no hay nada acá."}
+                    action="+ Agregar"
+                    onAction={() => openMediaEditor()}
+                  />
                 )
               ) : modo === "tapas" ? (
                 <div className="grid grid-cols-3 gap-x-3 gap-y-4 @lg:grid-cols-4 @2xl:grid-cols-5 @4xl:grid-cols-6 @6xl:grid-cols-8">
@@ -262,6 +289,16 @@ export function LibraryView({
                   entry={ficha}
                   onClose={() => setFicha(null)}
                   onEdit={() => editar(ficha)}
+                  onYaLaVi={
+                    showPendientes
+                      ? () => {
+                          setFicha(null);
+                          setShowPendientes(false);
+                          openMediaEditor(ficha, { pending: false, date: todayAR() });
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }
+                      : undefined
+                  }
                   onDelete={() => {
                     deleteEntry(ficha.id);
                     setFicha(null);

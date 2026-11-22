@@ -207,7 +207,7 @@ export function MediaEditorForm({
           />
         </label>
         <label className="grid gap-1.5 text-xs">
-          <span className="font-medium uppercase tracking-wide text-muted">Fecha</span>
+          <span className="font-medium uppercase tracking-wide text-muted">{form.pending ? "Anotada" : "Fecha"}</span>
           <input
             type="date"
             value={form.date}
@@ -229,6 +229,16 @@ export function MediaEditorForm({
           />
         </label>
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          className="login-checkbox"
+          checked={form.pending}
+          onChange={(e) => onChange({ pending: e.target.checked, ...(e.target.checked ? { rating: "" } : {}) })}
+        />
+        Quiero verla (todavía pendiente)
+      </label>
 
       <div className="grid gap-1.5 text-xs">
         <label htmlFor="media-tags" className="font-medium uppercase tracking-wide text-muted">Tags</label>

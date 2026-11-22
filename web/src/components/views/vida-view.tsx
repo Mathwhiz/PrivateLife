@@ -12,6 +12,7 @@ type VidaViewProps = {
   /** Hitos, textos y recuerdos (sin biblioteca ni hábitos). */
   entries: LifeEntry[];
   openEntry: (entry: LifeEntry) => void;
+  verResumen: () => void;
 };
 
 const filtros: { id: Filtro; label: string }[] = [
@@ -21,7 +22,7 @@ const filtros: { id: Filtro; label: string }[] = [
   { id: "memory", label: "Recuerdos" },
 ];
 
-export function VidaView({ entries, openEntry }: VidaViewProps) {
+export function VidaView({ entries, openEntry, verResumen }: VidaViewProps) {
   const [filtro, setFiltro] = useState<Filtro>("todo");
 
   const porAnio = useMemo(() => {
@@ -43,6 +44,9 @@ export function VidaView({ entries, openEntry }: VidaViewProps) {
         description="Hitos, textos y recuerdos en una sola línea de tiempo."
         aside={
           <div className="flex flex-wrap gap-2">
+            <button type="button" className="secondary-button" onClick={verResumen}>
+              Resumen del año
+            </button>
             {filtros.map((f) => (
               <button
                 key={f.id}
