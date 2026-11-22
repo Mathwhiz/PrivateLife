@@ -1,5 +1,5 @@
 
-export type AppView = "capture" | "habits" | "library" | "writings" | "milestones" | "archive" | "ajustes";
+export type AppView = "capture" | "habits" | "salud" | "library" | "writings" | "milestones" | "archive" | "ajustes";
 
 // ─── App config (persisted in localStorage) ──────────────────────
 
@@ -12,6 +12,7 @@ export type AppConfig = { sidebar: SidebarItemConfig[]; mediaTypes: MediaTypeCon
 export const defaultAppConfig: AppConfig = {
   sidebar: [
     { view: "habits",     label: "Hábitos",       visible: true },
+    { view: "salud",      label: "Salud",          visible: true },
     { view: "library",    label: "Biblioteca",     visible: true },
     { view: "writings",   label: "Textos",         visible: true },
     { view: "milestones", label: "Hitos",          visible: true },

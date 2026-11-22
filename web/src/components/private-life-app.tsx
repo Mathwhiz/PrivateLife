@@ -20,6 +20,7 @@ import { CaptureView } from "@/components/views/capture-view";
 import { HabitsView } from "@/components/views/habits-view";
 import { LibraryView } from "@/components/views/library-view";
 import { MilestonesView } from "@/components/views/milestones-view";
+import { SaludView } from "@/components/views/salud-view";
 import { SettingsView } from "@/components/views/ajustes-view";
 import { WritingsView } from "@/components/views/writings-view";
 import {
@@ -196,6 +197,11 @@ export function PrivateLifeApp() {
   const habitLogs = useMemo(
     () => sortEntries(normalizedEntries.filter((entry) => isHabitLogEntry(entry))),
     [normalizedEntries],
+  );
+
+  const banoDates = useMemo(
+    () => [...new Set(habitLogs.filter((entry) => entry.title === "Baño").map((entry) => entry.date))],
+    [habitLogs],
   );
 
   const habitTemplateEntries = useMemo(
@@ -908,6 +914,8 @@ export function PrivateLifeApp() {
               toggleHabit={toggleHabit}
             />
           ) : null}
+
+          {activeView === "salud" ? <SaludView banoDates={banoDates} /> : null}
 
           {activeView === "library" ? (
             <LibraryView
