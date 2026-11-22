@@ -1,12 +1,11 @@
 import type { Dispatch, SetStateAction } from "react";
 import { EmptyState, ViewHeader } from "@/components/ui/common";
-import { YearHeatmap } from "@/components/ui/heatmap";
-import { defaultHabitDraft, formatDate, type HabitDraft, type HabitStats, type HabitViewMode } from "@/lib/entries";
+import { HabitDetail } from "@/components/views/habit-detail";
+import { defaultHabitDraft, type HabitDraft, type HabitStats, type HabitViewMode } from "@/lib/entries";
 import { type LifeEntry } from "@/lib/types";
 
 export type HabitCatalogItem = { title: string; tags: string[]; content: string };
 type HabitsViewProps = {
-  deleteHabit: (title: string) => void;
   deleteHabitDraft: () => void;
   habitCatalog: HabitCatalogItem[];
   habitDate: string;
@@ -27,7 +26,6 @@ type HabitsViewProps = {
 };
 
 export function HabitsView({
-  deleteHabit,
   deleteHabitDraft,
   habitCatalog,
   habitDate,
@@ -53,15 +51,11 @@ export function HabitsView({
                 description={
                   habitViewMode === "checklist"
                     ? "Marcá lo que hiciste cada día, bueno o malo."
-                    : "Detalle con estadísticas y edición."
+                    : "Cuándo y cuánto, sin metas."
                 }
                 aside={
+                  habitViewMode === "detail" ? undefined : (
                   <div className="flex flex-wrap items-center gap-2">
-                    {habitViewMode === "detail" ? (
-                      <button type="button" className="secondary-button" onClick={() => setHabitViewMode("checklist")}>
-                        Volver
-                      </button>
-                    ) : null}
                       <label className="grid gap-2 text-sm">
                         <span className="font-medium text-foreground">Fecha</span>
                         <input
@@ -72,7 +66,8 @@ export function HabitsView({
                         />
                       </label>
                     </div>
-                  }
+                  )
+                }
                 />
 
               {habitViewMode === "checklist" ? (
@@ -176,105 +171,19 @@ export function HabitsView({
                     ) : null}
                   </div>
                 ) : selectedHabitMeta && habitStats ? (
-                  <div className="space-y-4">
-                    <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="section-kicker">seleccionado</p>
-                          <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
-                          <p className="mt-2 text-sm leading-6 text-muted">
-                            {selectedHabitMeta.content || "Sin descripcion"}
-                          </p>
-                        </div>
-                        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                          <button type="button" className="secondary-button" onClick={() => startEditingHabit(selectedHabitMeta.title)}>
-                            Editar
-                          </button>
-                          <button type="button" className="danger-button" onClick={() => deleteHabit(selectedHabitMeta.title)}>
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-
-                  <div className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3">
-                    <article className="stat-card">
-                      <span className="stat-label">7 dias</span>
-                      <strong className="stat-value">{habitStats.week}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">30 dias</span>
-                      <strong className="stat-value">{habitStats.month}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">365 dias</span>
-                      <strong className="stat-value">{habitStats.year}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">Total</span>
-                      <strong className="stat-value">{habitStats.total}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">Días seguidos</span>
-                      <strong className="stat-value">{habitStats.currentStreak}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <span className="stat-label">Máx. seguidos</span>
-                      <strong className="stat-value">{habitStats.bestStreak}</strong>
-                    </article>
-                  </div>
-
-                  <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                    <div className="flex flex-wrap items-end justify-between gap-4">
-                      <div>
-                        <p className="section-kicker">Última vez</p>
-                        <strong className="mt-2 block text-2xl font-medium text-foreground">
-                          {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
-                        </strong>
-                      </div>
-                      <div className="text-right">
-                        <p className="section-kicker">Cada cuánto</p>
-                        <p className="mt-2 text-sm text-foreground">
-                          {habitStats.avgGap90 === null
-                            ? "Poco en los últimos 90 días"
-                            : habitStats.avgGap90 <= 1.05
-                              ? "Todos los días"
-                              : `Cada ${habitStats.avgGap90.toLocaleString("es-AR", { maximumFractionDigits: 1 })} días`}
-                        </p>
-                      </div>
-                    </div>
-                  </article>
-
-                  <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                    <p className="section-kicker">Patron semanal</p>
-                    <div className="mt-4 grid gap-2">
-                      {["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"].map((label, index) => {
-                        const value = habitStats.weekdayCounts[index];
-                        const width = habitStats.total === 0 ? 0 : Math.max(10, (value / habitStats.total) * 100);
-                        return (
-                          <div key={label} className="grid grid-cols-[36px_minmax(0,1fr)_24px] items-center gap-3">
-                            <span className="text-xs text-muted">{label}</span>
-                            <div className="habit-bar-track">
-                              <span className="habit-bar-fill" style={{ width: `${width}%` }} />
-                            </div>
-                            <span className="text-xs text-foreground">{value}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </article>
-
-                  {habitStats.dates.length > 0 ? (
-                    <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                      <p className="section-kicker">Por día</p>
-                      <div className="mt-4 grid gap-5">
-                        {[...new Set(habitStats.dates.map((d) => Number(d.slice(0, 4))))].map((year) => (
-                          <YearHeatmap key={year} year={year} dates={new Set(habitStats.dates)} />
-                        ))}
-                      </div>
-                    </article>
-                  ) : null}
-                </div>
+                  <HabitDetail
+                    habit={selectedHabitMeta}
+                    stats={habitStats}
+                    catalog={habitCatalog}
+                    onSelect={setSelectedHabit}
+                    onBack={() => setHabitViewMode("checklist")}
+                    onEdit={() => {
+                      // El formulario de edición vive en la lista.
+                      setHabitViewMode("checklist");
+                      startEditingHabit(selectedHabitMeta.title);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  />
               ) : (
                 <EmptyState label="Elegí un ítem para ver estadísticas y editarlo." />
               )}

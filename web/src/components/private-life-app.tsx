@@ -757,7 +757,6 @@ export function PrivateLifeApp() {
 
           {activeView === "habits" ? (
             <HabitsView
-              deleteHabit={deleteHabit}
               deleteHabitDraft={deleteHabitDraft}
               habitCatalog={habitCatalog}
               habitDate={habitDate}
