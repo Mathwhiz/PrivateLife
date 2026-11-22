@@ -13,7 +13,7 @@ export const defaultAppConfig: AppConfig = {
   // Ajustes no va en el menú: se abre desde el ícono de engranaje.
   sidebar: [
     { view: "hoy",        label: "Hoy",           visible: true },
-    { view: "habits",     label: "Hábitos",       visible: true },
+    { view: "habits",     label: "Registro",      visible: true },
     { view: "library",    label: "Biblioteca",     visible: true },
     { view: "vida",       label: "Mi vida",        visible: true },
     { view: "salud",      label: "Salud",          visible: true },
@@ -28,7 +28,8 @@ export const defaultAppConfig: AppConfig = {
   ],
 };
 
-export const legacyLabels = new Set(["Habitos", "Pelicula"]);
+// Etiquetas que quedaron guardadas en localStorage y hay que reemplazar por la nueva.
+export const legacyLabels = new Set(["Habitos", "Hábitos", "Pelicula"]);
 
 export function loadConfig(): AppConfig {
   if (typeof window === "undefined") return defaultAppConfig;

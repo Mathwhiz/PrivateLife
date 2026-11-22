@@ -48,11 +48,11 @@ export function HabitsView({
   return (
             <div className="space-y-5">
               <ViewHeader
-                title="Hábitos diarios"
+                title="Registro diario"
                 description={
                   habitViewMode === "checklist"
-                    ? "Checklist compacta para resolver el día sin ruido."
-                    : "Detalle del hábito con estadísticas y edición."
+                    ? "Marcá lo que hiciste cada día, bueno o malo."
+                    : "Detalle con estadísticas y edición."
                 }
                 aside={
                   <div className="flex flex-wrap items-center gap-2">
@@ -79,7 +79,7 @@ export function HabitsView({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="section-kicker">Checklist</p>
-                      <p className="mt-1 text-sm text-muted">Marca lo de hoy y listo.</p>
+                      <p className="mt-1 text-sm text-muted">Tocá lo que hiciste y listo.</p>
                     </div>
                     <button
                       type="button"
@@ -127,7 +127,7 @@ export function HabitsView({
                     <form className="grid gap-3 rounded-xl border border-border bg-panel px-4 py-4" onSubmit={saveHabitTemplate}>
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-sm font-medium text-foreground">
-                          {habitDraft.originalTitle ? "Editar hábito" : "Crear hábito"}
+                          {habitDraft.originalTitle ? "Editar ítem" : "Nuevo ítem"}
                         </h3>
                         <button
                           type="button"
@@ -144,7 +144,7 @@ export function HabitsView({
                         type="text"
                         value={habitDraft.title}
                         onChange={(event) => setHabitDraft((current) => ({ ...current, title: event.target.value }))}
-                        placeholder="Nombre del hábito"
+                        placeholder="Nombre (ej.: Leer, Lol, Alcohol)"
                         className="field"
                       />
                       <input
@@ -157,7 +157,7 @@ export function HabitsView({
                       <textarea
                         value={habitDraft.content}
                         onChange={(event) => setHabitDraft((current) => ({ ...current, content: event.target.value }))}
-                        placeholder="Contexto corto del hábito"
+                        placeholder="Descripción corta (opcional)"
                         rows={3}
                         className="field resize-y"
                       />
@@ -168,7 +168,7 @@ export function HabitsView({
                             </button>
                           ) : null}
                           <button type="submit" className="primary-button">
-                            Guardar hábito
+                            Guardar
                           </button>
                         </div>
                       </form>
@@ -179,7 +179,7 @@ export function HabitsView({
                     <article className="rounded-xl border border-border bg-panel px-4 py-4">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <p className="section-kicker">hábito activo</p>
+                          <p className="section-kicker">seleccionado</p>
                           <h3 className="mt-2 text-lg font-medium text-foreground">{selectedHabitMeta.title}</h3>
                           <p className="mt-2 text-sm leading-6 text-muted">
                             {selectedHabitMeta.content || "Sin descripcion"}
@@ -293,7 +293,7 @@ export function HabitsView({
                   )}
                 </div>
               ) : (
-                <EmptyState label="Elegí un hábito para ver estadísticas y editarlo." />
+                <EmptyState label="Elegí un ítem para ver estadísticas y editarlo." />
               )}
             </div>
   );

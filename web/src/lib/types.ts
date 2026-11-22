@@ -48,7 +48,7 @@ export type LifeEntry = {
 
 export const entryTypeLabels: Record<EntryType, string> = {
   memory: "Recuerdo",
-  habit: "Habito",
+  habit: "Registro",
   movie: "Pelicula",
   book: "Libro",
   series: "Serie",
@@ -60,7 +60,7 @@ export const entryTypeLabels: Record<EntryType, string> = {
 
 export const entrySectionLabels: Record<EntrySection, string> = {
   general: "General",
-  habit: "Habito",
+  habit: "Registro",
   philosophy: "Filosofia",
   thought: "Pensamiento",
   anecdote: "Anecdota",

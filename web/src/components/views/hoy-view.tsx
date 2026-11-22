@@ -60,7 +60,7 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
 
   const ultimoDia = salud.dias[0] ?? null;
   const ultimoPeso = salud.dias.find((d) => d.peso !== null) ?? null;
-  const hechos = habitCatalog.filter((h) => doneToday.has(h.title)).length;
+  const hechos = doneToday.size;
   const fechaLarga = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long" }).format(
     new Date(`${hoy}T12:00:00`),
   );
@@ -75,13 +75,10 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
       <div className="grid gap-4 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section className="rounded-xl border border-border bg-panel px-4 py-4">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="section-kicker">Hábitos</p>
+            <p className="section-kicker">Qué hiciste hoy</p>
             <button type="button" className="text-xs text-muted hover:text-foreground" onClick={() => goTo("habits")}>
-              {hechos} de {habitCatalog.length} · Ver todos ›
+              {hechos ? `${hechos} ${hechos === 1 ? "marcado" : "marcados"} · ` : ""}Ver todo ›
             </button>
-          </div>
-          <div className="habit-bar-track mt-3">
-            <span className="habit-bar-fill" style={{ width: `${habitCatalog.length ? (hechos / habitCatalog.length) * 100 : 0}%` }} />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {habitCatalog.map((habit) => {
