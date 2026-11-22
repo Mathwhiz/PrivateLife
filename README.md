@@ -10,12 +10,15 @@ Un segundo cerebro personal. Registrá hábitos, biblioteca, escritos, hitos y m
 
 | Sección | Descripción |
 |---|---|
+| Hoy | Inicio: hábitos del día, resumen de Salud, «En este día» y lo último cargado |
 | Hábitos | Tracker diario con checklist, historial y estadísticas |
 | Biblioteca | Películas, series, libros, anime, manga y videojuegos — con tapa, rating, géneros y filtros |
-| Textos | Escritos personales: pensamientos, filosofía, anécdotas |
-| Hitos | Momentos importantes con fecha y contexto |
-| Archivo | Vista global de todas las entradas |
-| Ajustes | Exportar/importar datos, configurar la app |
+| Mi vida | Hitos (con fecha de inicio y fin), textos y recuerdos en una línea de tiempo |
+| Salud | Comidas, movimiento y peso leídos de una planilla de Google (vía Apps Script + edge function `salud`) |
+
+- **Agregar (+):** botón flotante en el celular y en el menú lateral en escritorio. Formularios cortos para texto, recuerdo e hito; para la biblioteca abre el formulario con búsqueda de tapa.
+- **Buscar:** lupa arriba (o `Ctrl+K`). Busca en todo menos los registros de hábitos, salvo que elijas ese filtro.
+- **Ajustes:** ícono de engranaje. Exportar/importar datos y configurar la app.
 
 ### Biblioteca
 
@@ -119,6 +122,7 @@ El token se saca gratis en [themoviedb.org](https://www.themoviedb.org/settings/
 
 ```bash
 npm run dev                              # Servidor de desarrollo
+npm run dev:sandbox                      # Igual pero sin Supabase ni login (localhost:3001), para probar la interfaz
 npm run build                           # Build de producción
 node scripts/generate-icons.mjs         # Regenerar íconos Android + PWA
 node scripts/generate-tutorial-pdf.mjs  # Regenerar tutorial PDF

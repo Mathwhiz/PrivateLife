@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   flushSave,
   getKnownUpdatedAt,
@@ -14,24 +14,28 @@ import {
 import { getSession, onAuthStateChange } from "@/lib/auth";
 import { LoginScreen } from "@/components/login-screen";
 import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
-import { FormState, HabitDraft, HabitStats, HabitViewMode, MediaFormState, daysBetween, defaultFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, isHabitLogEntry, isHabitTemplateEntry, isHiddenHabitTemplateEntry, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, normalizeSection, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
-import { ArchiveView } from "@/components/views/archive-view";
-import { CaptureView } from "@/components/views/capture-view";
+import { HabitDraft, HabitViewMode, daysBetween, MediaFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
+import { useHabits } from "@/lib/use-habits";
+import { useRegistroSalud } from "@/lib/use-registro-salud";
 import { HabitsView } from "@/components/views/habits-view";
+import { HoyView } from "@/components/views/hoy-view";
 import { LibraryView } from "@/components/views/library-view";
-import { MilestonesView } from "@/components/views/milestones-view";
 import { SaludView } from "@/components/views/salud-view";
 import { SettingsView } from "@/components/views/ajustes-view";
-import { WritingsView } from "@/components/views/writings-view";
+import { VidaView } from "@/components/views/vida-view";
+import { SearchOverlay } from "@/components/ui/search-overlay";
+import { QuickAddChooser, QuickEntryForm, draftToEntry, entryToDraft, newDraft, type QuickDraft } from "@/components/ui/quick-add";
 import {
-  entrySectionLabels,
   initialEntries,
   quickHabits,
-  sectionOptionsByType,
-  type EntrySection,
   type EntryType,
   type LifeEntry,
 } from "@/lib/types";
+
+// Solo en `npm run dev:sandbox`: entra sin login y no toca Supabase.
+const SANDBOX = process.env.NEXT_PUBLIC_SANDBOX === "1";
+
+type QuickState = { step: "choose" } | { step: "form"; draft: QuickDraft } | null;
 
 export function PrivateLifeApp() {
   const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">("checking");
@@ -39,19 +43,17 @@ export function PrivateLifeApp() {
   const [syncSource, setSyncSource] = useState<"supabase" | "local">("local");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isHydrated, setIsHydrated] = useState(false);
-  const [activeView, setActiveView] = useState<AppView>("habits");
-  const [archiveFilter, setArchiveFilter] = useState<EntryType | "all">("all");
+  const [activeView, setActiveView] = useState<AppView>("hoy");
   const [libraryFilter, setLibraryFilter] = useState<EntryType | "all-media">("all-media");
   const [genreFilter, setGenreFilter] = useState<string>("all-genres");
-  const [writingFilter, setWritingFilter] = useState<EntrySection | "all-writing">("all-writing");
   const [habitDate, setHabitDate] = useState(todayAR);
-  const [form, setForm] = useState<FormState>(defaultFormState);
   const [habitDraft, setHabitDraft] = useState<HabitDraft>(defaultHabitDraft);
   const [isHabitComposerOpen, setIsHabitComposerOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<string | null>(null);
   const [habitViewMode, setHabitViewMode] = useState<HabitViewMode>("checklist");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [quick, setQuick] = useState<QuickState>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [undoDelete, setUndoDelete] = useState<{ entry: LifeEntry; index: number } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mediaForm, setMediaForm] = useState<MediaFormState | null>(null);
@@ -59,18 +61,20 @@ export function PrivateLifeApp() {
   const [librarySearch, setLibrarySearch] = useState("");
   const [librarySort, setLibrarySort] = useState<"date-desc" | "date-asc" | "rating-desc" | "rating-asc">("date-desc");
   const [appConfig, setAppConfig] = useState<AppConfig>(() => loadConfig());
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string>("");
   const [syncConflict, setSyncConflict] = useState(false);
   const [pendingRemoteEntries, setPendingRemoteEntries] = useState<LifeEntry[] | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   // Evita el eco: cuando las entradas vienen de la nube no hay que volver a subirlas.
   const skipNextSave = useRef(false);
-  const deferredQuery = useDeferredValue(searchQuery);
 
   // 1. Verificar sesión al montar y escuchar cambios de auth
   useEffect(() => {
+    if (SANDBOX) {
+      setAuthState("authenticated");
+      return;
+    }
+
     void getSession().then((session) => {
       setAuthState(session ? "authenticated" : "unauthenticated");
     });
@@ -181,173 +185,45 @@ export function PrivateLifeApp() {
     }
   }, [appConfig]);
 
-  const normalizedEntries = useMemo(
-    () =>
-      entries.map((entry) =>
-        entry.type === "habit"
-          ? {
-              ...entry,
-              title: normalizeHabitTitle(entry.title),
-            }
-          : entry,
-      ),
-    [entries],
-  );
-
-  const habitLogs = useMemo(
-    () => sortEntries(normalizedEntries.filter((entry) => isHabitLogEntry(entry))),
-    [normalizedEntries],
-  );
+  const {
+    normalizedEntries,
+    habitLogs,
+    habitTemplateEntries,
+    habitCatalog,
+    selectedHabitMeta,
+    habitsForDay,
+    habitStats,
+  } = useHabits(entries, habitDate, selectedHabit);
 
   const banoDates = useMemo(
-    () => [...new Set(habitLogs.filter((entry) => entry.title === "Baño").map((entry) => entry.date))],
+    () => [...new Set(habitLogs.filter((entry) => entry.title === "Ba\u00f1o").map((entry) => entry.date))],
     [habitLogs],
   );
 
-  const habitTemplateEntries = useMemo(
-    () => normalizedEntries.filter((entry) => isHabitTemplateEntry(entry)),
-    [normalizedEntries],
+  const today = todayAR();
+  const doneToday = useMemo(
+    () => new Set(habitLogs.filter((entry) => entry.date === today).map((entry) => entry.title)),
+    [habitLogs, today],
   );
 
-  const hiddenHabitTitles = useMemo(
-    () =>
-      new Set(
-        habitTemplateEntries
-          .filter((entry) => isHiddenHabitTemplateEntry(entry))
-          .map((entry) => normalizeHabitTitle(entry.title)),
-      ),
-    [habitTemplateEntries],
-  );
-
-  const habitCatalog = useMemo(() => {
-    const catalog = new Map<string, { title: string; tags: string[]; content: string }>();
-
-    for (const habit of quickHabits) {
-      const title = normalizeHabitTitle(habit.title);
-      if (hiddenHabitTitles.has(title)) {
-        continue;
-      }
-      catalog.set(title, { title, tags: [...habit.tags], content: habit.content });
-    }
-
-    for (const entry of habitTemplateEntries) {
-      if (isHiddenHabitTemplateEntry(entry)) {
-        continue;
-      }
-      catalog.set(entry.title, {
-        title: entry.title,
-        tags: entry.tags.filter((tag) => !["habit", habitTemplateTag].includes(tag)),
-        content: entry.content,
-      });
-    }
-
+  // En Hoy van solo los hábitos que usás: marcados en los últimos 45 días, los más frecuentes primero.
+  const activeHabits = useMemo(() => {
+    const counts = new Map<string, number>();
     for (const entry of habitLogs) {
-      const existing = catalog.get(entry.title);
-      if (!existing) {
-        catalog.set(entry.title, {
-          title: entry.title,
-          tags: entry.tags.filter((tag) => tag !== "habit"),
-          content: entry.content,
-        });
-        continue;
-      }
-
-      catalog.set(entry.title, {
-        title: entry.title,
-        tags: [...new Set([...existing.tags, ...entry.tags.filter((tag) => tag !== "habit")])],
-        content: existing.content || entry.content,
-      });
+      if (daysBetween(today, entry.date) <= 44) counts.set(entry.title, (counts.get(entry.title) ?? 0) + 1);
     }
+    const active = habitCatalog.filter((habit) => counts.has(habit.title));
+    return [...(active.length ? active : habitCatalog)].sort((a, b) => (counts.get(b.title) ?? 0) - (counts.get(a.title) ?? 0));
+  }, [habitCatalog, habitLogs, today]);
 
-    return [...catalog.values()].sort((a, b) => a.title.localeCompare(b.title));
-  }, [habitLogs, habitTemplateEntries, hiddenHabitTitles]);
-
-  const activeHabitTitle = useMemo(() => {
-    if (selectedHabit && habitCatalog.some((habit) => habit.title === selectedHabit)) {
-      return selectedHabit;
-    }
-    return habitCatalog[0]?.title ?? null;
-  }, [habitCatalog, selectedHabit]);
-
-  const selectedHabitMeta = useMemo(
-    () => habitCatalog.find((habit) => habit.title === activeHabitTitle) ?? null,
-    [activeHabitTitle, habitCatalog],
+  // Todo menos los registros de hábitos (son ~8.400 y solo ensucian listas y búsqueda).
+  const lifeEntries = useMemo(() => normalizedEntries.filter((entry) => entry.type !== "habit"), [normalizedEntries]);
+  const vidaEntries = useMemo(
+    () => lifeEntries.filter((entry) => entry.type === "note" || entry.type === "memory"),
+    [lifeEntries],
   );
 
-  const habitsForDay = useMemo(
-    () => habitLogs.filter((entry) => entry.date === habitDate),
-    [habitDate, habitLogs],
-  );
-
-  const selectedHabitLogs = useMemo(
-    () => habitLogs.filter((entry) => entry.title === activeHabitTitle),
-    [activeHabitTitle, habitLogs],
-  );
-
-  const habitStats = useMemo<HabitStats | null>(() => {
-    if (!activeHabitTitle) {
-      return null;
-    }
-
-    const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
-    const uniqueDates = [...new Set(selectedHabitLogs.map((entry) => entry.date))].sort((a, b) => b.localeCompare(a));
-
-    for (const entry of selectedHabitLogs) {
-      const day = new Date(`${entry.date}T12:00:00`).getDay();
-      weekdayCounts[day] += 1;
-    }
-
-    let currentStreak = 0;
-    for (let index = 0; index < uniqueDates.length; index += 1) {
-      if (daysBetween(habitDate, uniqueDates[index]) === index) {
-        currentStreak += 1;
-      } else if (index > 0 || daysBetween(habitDate, uniqueDates[index]) !== 0) {
-        break;
-      }
-    }
-
-    let bestStreak = 0;
-    let streak = 0;
-    let previousDate: string | null = null;
-    const ascendingDates = [...uniqueDates].reverse();
-    for (const date of ascendingDates) {
-      if (!previousDate) {
-        streak = 1;
-      } else {
-        const gap = daysBetween(date, previousDate);
-        streak = gap === 1 ? streak + 1 : 1;
-      }
-      previousDate = date;
-      bestStreak = Math.max(bestStreak, streak);
-    }
-
-    const completionRate30 = Math.round((selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 29).length / 30) * 100);
-
-    const monthlyMap = new Map<number, number[]>();
-    for (const entry of selectedHabitLogs) {
-      const d = new Date(`${entry.date}T12:00:00`);
-      const y = d.getFullYear();
-      const m = d.getMonth();
-      if (!monthlyMap.has(y)) monthlyMap.set(y, Array<number>(12).fill(0));
-      monthlyMap.get(y)![m] += 1;
-    }
-    const monthlyCounts = [...monthlyMap.entries()]
-      .sort((a, b) => b[0] - a[0])
-      .map(([year, months]) => ({ year, months }));
-
-    return {
-      total: selectedHabitLogs.length,
-      week: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 6).length,
-      month: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 29).length,
-      year: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 364).length,
-      currentStreak,
-      bestStreak,
-      completionRate30,
-      weekdayCounts,
-      monthlyCounts,
-      lastDone: selectedHabitLogs[0]?.date ?? null,
-    };
-  }, [activeHabitTitle, habitDate, selectedHabitLogs]);
+  const salud = useRegistroSalud(isHydrated && !SANDBOX);
 
   const mediaEntries = useMemo(
     () => sortEntries(normalizedEntries.filter((entry) => mediaTypes.includes(entry.type))),
@@ -384,7 +260,6 @@ export function PrivateLifeApp() {
 
     const filtered = byType.filter((entry) => {
       const matchesGenre = genreFilter === "all-genres" || entry.tags.includes(genreFilter);
-      const matchesTag = activeTag === null || entry.tags.includes(activeTag);
       const matchesSearch =
         searchNorm === "" || entry.title.toLowerCase().includes(searchNorm);
       const matchesRating =
@@ -392,7 +267,7 @@ export function PrivateLifeApp() {
         (entry.rating !== undefined &&
           entry.rating !== null &&
           parseFloat(`${entry.rating}`) >= parseFloat(ratingFilter));
-      return matchesGenre && matchesTag && matchesSearch && matchesRating;
+      return matchesGenre && matchesSearch && matchesRating;
     });
 
     return [...filtered].sort((a, b) => {
@@ -414,114 +289,14 @@ export function PrivateLifeApp() {
           return b.date.localeCompare(a.date);
       }
     });
-  }, [activeTag, genreFilter, libraryFilter, librarySearch, librarySort, mediaEntries, ratingFilter]);
-
-  const writingEntries = useMemo(
-    () =>
-      sortEntries(
-        normalizedEntries.filter(
-          (entry) =>
-            entry.type === "note" ||
-            (entry.type === "memory" &&
-              !entry.tags.includes("milestone") &&
-              normalizeSection(entry) !== "general"),
-        ),
-      ),
-    [normalizedEntries],
-  );
-
-  const visibleWritings = useMemo(() => {
-    const scoped =
-      writingFilter === "all-writing"
-        ? writingEntries
-        : writingEntries.filter((entry) => normalizeSection(entry) === writingFilter);
-
-    return scoped.filter((entry) => activeTag === null || entry.tags.includes(activeTag));
-  }, [activeTag, writingEntries, writingFilter]);
-
-  const milestoneEntries = useMemo(
-    () =>
-      sortEntries(
-        normalizedEntries.filter(
-          (entry) => entry.type === "memory" && entry.tags.includes("milestone"),
-        ),
-      ),
-    [normalizedEntries],
-  );
-
-  const filteredArchive = useMemo(() => {
-    const scoped =
-      archiveFilter === "all"
-        ? normalizedEntries
-        : normalizedEntries.filter((entry) => entry.type === archiveFilter);
-    const normalizedQuery = deferredQuery.trim().toLowerCase();
-
-    return sortEntries(
-      scoped.filter((entry) => {
-        const matchesQuery =
-          normalizedQuery.length === 0 ||
-          entry.title.toLowerCase().includes(normalizedQuery) ||
-          entry.content.toLowerCase().includes(normalizedQuery) ||
-          entry.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery)) ||
-          entrySectionLabels[normalizeSection(entry)].toLowerCase().includes(normalizedQuery);
-
-        const matchesTag = activeTag === null || entry.tags.includes(activeTag);
-        return matchesQuery && matchesTag;
-      }),
-    );
-  }, [activeTag, archiveFilter, deferredQuery, normalizedEntries]);
-
-  const allTags = useMemo(
-    () => [...new Set(normalizedEntries.flatMap((entry) => entry.tags))].slice(0, 20),
-    [normalizedEntries],
-  );
-
-  function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((current) => {
-      if (key === "type") {
-        const nextType = value as EntryType;
-        return {
-          ...current,
-          type: nextType,
-          section: sectionOptionsByType[nextType][0],
-        };
-      }
-
-      return { ...current, [key]: value };
-    });
-  }
+  }, [genreFilter, libraryFilter, librarySearch, librarySort, mediaEntries, ratingFilter]);
 
   function createEntry(nextEntry: LifeEntry) {
     setEntries((current) => [nextEntry, ...current]);
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const title = form.title.trim();
-    const content = form.content.trim();
-
-    if (!title || !content || !form.date) {
-      return;
-    }
-
-    createEntry({
-      id: makeEntryId(form.type, form.date, title, content.slice(0, 24)),
-      type: form.type,
-      section: form.section,
-      title,
-      content,
-      date: form.date,
-      tags: form.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    });
-    setForm(defaultFormState());
-    setActiveView("archive");
-  }
-
-  function toggleHabit(title: string) {
-    const existing = habitLogs.find((entry) => entry.title === title && entry.date === habitDate);
+  function toggleHabit(title: string, date = habitDate) {
+    const existing = habitLogs.find((entry) => entry.title === title && entry.date === date);
 
     if (existing) {
       setEntries((current) => current.filter((entry) => entry.id !== existing.id));
@@ -530,12 +305,12 @@ export function PrivateLifeApp() {
 
     const habitMeta = habitCatalog.find((habit) => habit.title === title);
     createEntry({
-      id: makeEntryId("habit-log", title, habitDate),
+      id: makeEntryId("habit-log", title, date),
       type: "habit",
       section: "habit",
       title,
       content: habitMeta?.content ?? "Registro diario del habito.",
-      date: habitDate,
+      date,
       tags: [...new Set(["habit", ...(habitMeta?.tags ?? [])])],
     });
   }
@@ -692,6 +467,50 @@ export function PrivateLifeApp() {
     }
   }
 
+  function openNewMedia(type: EntryType) {
+    setQuick(null);
+    setLibraryFilter(type);
+    setMediaForm(defaultMediaForm(type));
+    setActiveView("library");
+  }
+
+  /** Abre una entrada donde se edita: biblioteca, formulario corto o el día del hábito. */
+  function openEntry(entry: LifeEntry) {
+    setSearchOpen(false);
+    if (mediaTypes.includes(entry.type)) {
+      setMediaForm(entryToMediaForm(entry));
+      setActiveView("library");
+      return;
+    }
+    if (entry.type === "habit") {
+      setHabitDate(entry.date);
+      setHabitViewMode("checklist");
+      setActiveView("habits");
+      return;
+    }
+    const draft = entryToDraft(entry);
+    if (draft) setQuick({ step: "form", draft });
+  }
+
+  function saveQuick(draft: QuickDraft) {
+    const existing = draft.id ? entries.find((e) => e.id === draft.id) : undefined;
+    const next = draftToEntry(draft, existing, new Set(entries.map((e) => e.id)));
+    setEntries((current) => (existing ? current.map((e) => (e.id === next.id ? next : e)) : [next, ...current]));
+    setQuick(null);
+  }
+
+  // Ctrl/Cmd+K abre la búsqueda desde cualquier pantalla.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   function saveMediaForm(event: React.FormEvent) {
     event.preventDefault();
     if (!mediaForm || !mediaForm.title.trim()) return;
@@ -767,8 +586,6 @@ export function PrivateLifeApp() {
             ? "Guardado"
             : "Solo en este equipo";
 
-  const currentSectionOptions = sectionOptionsByType[form.type];
-
   if (authState === "checking") {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-[1520px] items-center justify-center px-4 py-10">
@@ -798,7 +615,7 @@ export function PrivateLifeApp() {
     );
   }
 
-  const mobileNavItems = appConfig.sidebar.filter((item) => item.visible);
+  const navItems = appConfig.sidebar.filter((item) => item.visible);
 
   return (
     <main className="app-shell mx-auto flex w-full max-w-[2200px] flex-col px-3 py-3 sm:px-4 lg:px-5">
@@ -838,61 +655,92 @@ export function PrivateLifeApp() {
       )}
       <div className={`grid gap-3 ${sidebarOpen ? "xl:grid-cols-[220px_minmax(0,1fr)]" : ""}`}>
         <aside className={`hidden flex-col rounded-xl border border-border bg-surface px-4 py-5 xl:sticky xl:top-3 xl:h-[calc(100vh-1.5rem)] ${sidebarOpen ? "xl:flex" : ""}`}>
-            <div className="flex items-start justify-between border-b border-border pb-4">
-              <div>
-                <p className="section-kicker">private life</p>
-                <h1 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">
-                  Archivo vivo.
-                </h1>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="sidebar-toggle mt-0.5"
-                title="Cerrar menú"
-              >
-                ‹
-              </button>
+          <div className="flex items-start justify-between border-b border-border pb-4">
+            <div>
+              <p className="section-kicker">private life</p>
+              <h1 className="mt-2 text-base font-medium tracking-[-0.02em] text-foreground">Archivo vivo.</h1>
             </div>
+            <button type="button" onClick={() => setSidebarOpen(false)} className="sidebar-toggle mt-0.5" title="Cerrar menú">
+              ‹
+            </button>
+          </div>
 
-            <nav className="mt-5 grid gap-1.5 text-sm">
-            {appConfig.sidebar
-              .filter((item) => item.visible)
-              .map(({ view, label }) => (
-                <button
-                  key={view}
-                  type="button"
-                  onClick={() => setActiveView(view)}
-                  className={activeView === view ? "nav-link nav-link-active" : "nav-link"}
-                >
-                  {label}
-                </button>
-              ))}
+          <button type="button" className="search-trigger mt-4" onClick={() => setSearchOpen(true)}>
+            <SearchIcon />
+            <span className="flex-1 text-left">Buscar</span>
+            <kbd className="text-[0.65rem] text-muted">Ctrl K</kbd>
+          </button>
+
+          <nav className="mt-4 grid gap-1.5 text-sm">
+            {navItems.map(({ view, label }) => (
+              <button
+                key={view}
+                type="button"
+                onClick={() => setActiveView(view)}
+                className={activeView === view ? "nav-link nav-link-active" : "nav-link"}
+              >
+                {label}
+              </button>
+            ))}
           </nav>
 
-          <div className="mt-auto pt-4 border-t border-border">
+          <button type="button" className="primary-button mt-5" onClick={() => setQuick({ step: "choose" })}>
+            + Agregar
+          </button>
+
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4">
             <p className="text-xs text-muted">
               {saveStatus === "saving" ? "↻ " : "↑ "}
-              {saveLabel}
+              {SANDBOX ? "Modo prueba (sin nube)" : saveLabel}
             </p>
+            <button
+              type="button"
+              className={`icon-button ${activeView === "ajustes" ? "text-accent" : ""}`}
+              onClick={() => setActiveView("ajustes")}
+              title="Ajustes"
+              aria-label="Ajustes"
+            >
+              <GearIcon />
+            </button>
           </div>
         </aside>
 
         <section className="@container min-w-0 rounded-xl border border-border bg-surface px-5 py-5 sm:px-6 sm:py-6">
-            {!sidebarOpen ? (
-              <div className="mb-5 hidden items-center gap-3 border-b border-border pb-4 xl:flex">
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(true)}
-                  className="sidebar-toggle"
-                  title="Abrir menú"
-                >
-                  ≡
-                </button>
-                <span className="section-kicker">private life</span>
-              </div>
-            ) : null}
-            {activeView === "habits" ? (
+          {/* Barra superior: en el celular siempre, en escritorio solo con el menú cerrado. */}
+          <div className={`mb-5 flex items-center gap-2 border-b border-border pb-4 ${sidebarOpen ? "xl:hidden" : ""}`}>
+            <span className="hidden xl:inline-flex">
+              <button type="button" onClick={() => setSidebarOpen(true)} className="sidebar-toggle" title="Abrir menú">
+                ≡
+              </button>
+            </span>
+            <span className="section-kicker flex-1">private life</span>
+            <button type="button" className="icon-button" onClick={() => setSearchOpen(true)} aria-label="Buscar" title="Buscar">
+              <SearchIcon />
+            </button>
+            <button
+              type="button"
+              className={`icon-button ${activeView === "ajustes" ? "text-accent" : ""}`}
+              onClick={() => setActiveView("ajustes")}
+              aria-label="Ajustes"
+              title="Ajustes"
+            >
+              <GearIcon />
+            </button>
+          </div>
+
+          {activeView === "hoy" ? (
+            <HoyView
+              entries={lifeEntries}
+              habitCatalog={activeHabits}
+              doneToday={doneToday}
+              toggleHabitToday={(title) => toggleHabit(title, today)}
+              salud={salud}
+              goTo={setActiveView}
+              openEntry={openEntry}
+            />
+          ) : null}
+
+          {activeView === "habits" ? (
             <HabitsView
               deleteHabit={deleteHabit}
               deleteHabitDraft={deleteHabitDraft}
@@ -911,11 +759,11 @@ export function PrivateLifeApp() {
               setIsHabitComposerOpen={setIsHabitComposerOpen}
               setSelectedHabit={setSelectedHabit}
               startEditingHabit={startEditingHabit}
-              toggleHabit={toggleHabit}
+              toggleHabit={(title) => toggleHabit(title)}
             />
           ) : null}
 
-          {activeView === "salud" ? <SaludView banoDates={banoDates} /> : null}
+          {activeView === "salud" ? <SaludView banoDates={banoDates} salud={salud} /> : null}
 
           {activeView === "library" ? (
             <LibraryView
@@ -940,41 +788,7 @@ export function PrivateLifeApp() {
             />
           ) : null}
 
-          {activeView === "writings" ? (
-            <WritingsView
-              writingFilter={writingFilter}
-              setWritingFilter={setWritingFilter}
-              visibleWritings={visibleWritings}
-            />
-          ) : null}
-
-          {activeView === "milestones" ? (
-            <MilestonesView
-              milestoneEntries={milestoneEntries}
-            />
-          ) : null}
-
-          {activeView === "archive" ? (
-            <ArchiveView
-              activeTag={activeTag}
-              allTags={allTags}
-              archiveFilter={archiveFilter}
-              filteredArchive={filteredArchive}
-              searchQuery={searchQuery}
-              setActiveTag={setActiveTag}
-              setArchiveFilter={setArchiveFilter}
-              setSearchQuery={setSearchQuery}
-            />
-          ) : null}
-
-          {activeView === "capture" ? (
-            <CaptureView
-              currentSectionOptions={currentSectionOptions}
-              form={form}
-              handleSubmit={handleSubmit}
-              updateForm={updateForm}
-            />
-          ) : null}
+          {activeView === "vida" ? <VidaView entries={vidaEntries} openEntry={openEntry} /> : null}
 
           {activeView === "ajustes" ? (
             <SettingsView
@@ -993,6 +807,41 @@ export function PrivateLifeApp() {
         </section>
       </div>
 
+      {/* El "+" flotante solo en el celular: en escritorio está en el menú lateral. */}
+      {quick === null && !searchOpen && mediaForm === null ? (
+        <button type="button" className="fab xl:hidden" onClick={() => setQuick({ step: "choose" })} aria-label="Agregar">
+          +
+        </button>
+      ) : null}
+
+      {quick?.step === "choose" ? (
+        <QuickAddChooser
+          onClose={() => setQuick(null)}
+          onPick={(kind) => setQuick({ step: "form", draft: newDraft(kind) })}
+          onPickMedia={openNewMedia}
+          mediaVisible={(type) => appConfig.mediaTypes.find((m) => m.id === type)?.visible ?? true}
+        />
+      ) : null}
+
+      {quick?.step === "form" ? (
+        <QuickEntryForm
+          key={quick.draft.id ?? quick.draft.kind}
+          initial={quick.draft}
+          onClose={() => setQuick(null)}
+          onSave={saveQuick}
+          onDelete={
+            quick.draft.id
+              ? () => {
+                  deleteEntry(quick.draft.id!);
+                  setQuick(null);
+                }
+              : undefined
+          }
+        />
+      ) : null}
+
+      {searchOpen ? <SearchOverlay entries={normalizedEntries} onOpen={openEntry} onClose={() => setSearchOpen(false)} /> : null}
+
       {undoDelete ? (
         <div className="undo-toast" role="status">
           <span className="truncate">Se eliminó “{undoDelete.entry.title}”</span>
@@ -1002,57 +851,37 @@ export function PrivateLifeApp() {
         </div>
       ) : null}
 
-      {moreOpen ? (
-        <div className="more-sheet-backdrop xl:hidden" onClick={() => setMoreOpen(false)}>
-          <div className="more-sheet" role="menu" onClick={(event) => event.stopPropagation()}>
-            {mobileNavItems.slice(4).map(({ view, label }) => (
-              <button
-                key={view}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setActiveView(view);
-                  setMoreOpen(false);
-                }}
-                className={activeView === view ? "nav-link nav-link-active" : "nav-link"}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <nav className="bottom-nav xl:hidden" aria-label="Secciones">
-        {mobileNavItems.slice(0, mobileNavItems.length > 5 ? 4 : 5).map(({ view, label }) => (
+        {navItems.map(({ view, label }) => (
           <button
             key={view}
             type="button"
-            onClick={() => {
-              setActiveView(view);
-              setMoreOpen(false);
-            }}
+            onClick={() => setActiveView(view)}
             className={activeView === view ? "bottom-nav-item bottom-nav-item-active" : "bottom-nav-item"}
             aria-current={activeView === view ? "page" : undefined}
           >
             {label}
           </button>
         ))}
-        {mobileNavItems.length > 5 ? (
-          <button
-            type="button"
-            onClick={() => setMoreOpen((open) => !open)}
-            className={
-              moreOpen || mobileNavItems.slice(4).some((item) => item.view === activeView)
-                ? "bottom-nav-item bottom-nav-item-active"
-                : "bottom-nav-item"
-            }
-            aria-expanded={moreOpen}
-          >
-            Más
-          </button>
-        ) : null}
       </nav>
     </main>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
   );
 }

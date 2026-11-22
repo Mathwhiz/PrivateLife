@@ -746,3 +746,132 @@ a {
 .fade-up-delay {
   animation: fadeUp 0.6s ease-out both;
 }
+
+/* ─── Etapa 1: buscar, agregar, hojas ────── */
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.icon-button:hover {
+  color: var(--foreground);
+  background: var(--accent-soft);
+}
+
+.search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.4rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.search-trigger:hover {
+  color: var(--foreground);
+  border-color: var(--border-mid);
+}
+
+.fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  z-index: 45;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1c0e04;
+  font-size: 1.9rem;
+  line-height: 1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.sheet {
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  border: 1px solid var(--border-mid);
+  border-radius: 1rem 1rem 0 0;
+  background: var(--surface-strong);
+  padding: 1.1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .sheet-backdrop {
+    align-items: flex-start;
+    padding-top: 10vh;
+  }
+
+  .sheet {
+    max-width: 34rem;
+    max-height: 80vh;
+    border-radius: 0.9rem;
+    padding: 1.25rem;
+  }
+}
+
+.choice-tile {
+  min-height: 3.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--panel);
+  font-size: 0.9rem;
+  color: var(--foreground);
+}
+
+.choice-tile:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Línea de tiempo de Mi vida: un punto por entrada, con color por tipo. */
+.timeline-item {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.15rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.timeline-milestone::before {
+  background: var(--gold);
+}
+
+.timeline-note::before {
+  background: var(--sage);
+}
+
+.timeline-memory::before {
+  background: var(--rose);
+}

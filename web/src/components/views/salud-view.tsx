@@ -1,42 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, ViewHeader } from "@/components/ui/common";
 import { daysBetween, formatDate, todayAR } from "@/lib/entries";
-import { armarDias, leerCache, traerRegistro, type DiaSalud, type ItemSalud, type RegistroSalud } from "@/lib/salud";
+import { type DiaSalud, type ItemSalud } from "@/lib/salud";
+import { type RegistroSaludState } from "@/lib/use-registro-salud";
 
 type SaludViewProps = {
   /** Días con el hábito "Baño" marcado en la app. Es el registro principal de baño. */
   banoDates: string[];
+  salud: RegistroSaludState;
 };
 
 const kcal = (n: number) => Math.round(n).toLocaleString("es-AR");
 const kg = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-export function SaludView({ banoDates }: SaludViewProps) {
-  const [registro, setRegistro] = useState<RegistroSalud | null>(null);
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState("");
+export function SaludView({ banoDates, salud }: SaludViewProps) {
+  const { registro, dias, cargando, error, actualizar } = salud;
   const [seleccion, setSeleccion] = useState<string | null>(null);
-
-  async function actualizar() {
-    setCargando(true);
-    setError("");
-    try {
-      setRegistro(await traerRegistro());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo leer la planilla.");
-    } finally {
-      setCargando(false);
-    }
-  }
-
-  useEffect(() => {
-    // Primero lo último que se vio (al instante), después lo fresco.
-    const cache = leerCache();
-    if (cache) setRegistro(cache);
-    void actualizar();
-  }, []);
-
-  const dias = useMemo(() => (registro ? armarDias(registro.filas) : []), [registro]);
   const hoy = todayAR();
 
   // Baño: lo de la app más lo que la planilla tenga y la app no (hoy son un subconjunto).

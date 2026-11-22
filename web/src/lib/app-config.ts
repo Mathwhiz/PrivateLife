@@ -1,5 +1,5 @@
 
-export type AppView = "capture" | "habits" | "salud" | "library" | "writings" | "milestones" | "archive" | "ajustes";
+export type AppView = "hoy" | "habits" | "salud" | "library" | "vida" | "ajustes";
 
 // ─── App config (persisted in localStorage) ──────────────────────
 
@@ -10,15 +10,13 @@ export type MediaTypeConfig = { id: string; label: string; visible: boolean };
 export type AppConfig = { sidebar: SidebarItemConfig[]; mediaTypes: MediaTypeConfig[] };
 
 export const defaultAppConfig: AppConfig = {
+  // Ajustes no va en el menú: se abre desde el ícono de engranaje.
   sidebar: [
+    { view: "hoy",        label: "Hoy",           visible: true },
     { view: "habits",     label: "Hábitos",       visible: true },
-    { view: "salud",      label: "Salud",          visible: true },
     { view: "library",    label: "Biblioteca",     visible: true },
-    { view: "writings",   label: "Textos",         visible: true },
-    { view: "milestones", label: "Hitos",          visible: true },
-    { view: "archive",    label: "Archivo",        visible: true },
-    { view: "capture",    label: "Nueva entrada",  visible: true },
-    { view: "ajustes",    label: "Ajustes",        visible: true },
+    { view: "vida",       label: "Mi vida",        visible: true },
+    { view: "salud",      label: "Salud",          visible: true },
   ],
   mediaTypes: [
     { id: "movie",  label: "Película", visible: true },

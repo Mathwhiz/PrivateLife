@@ -40,6 +40,10 @@ export type LifeEntry = {
   external?: { source: ExternalSource; id: string };
   playtime_hours?: number;
   steam_appid?: number;
+  /** Hitos con duración: "desde" es `date`, "hasta" es esto. */
+  end_date?: string;
+  /** Cuándo se cargó (ISO). Solo lo tienen las entradas creadas desde la app nueva. */
+  created_at?: string;
 };
 
 export const entryTypeLabels: Record<EntryType, string> = {
