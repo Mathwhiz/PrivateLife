@@ -1,5 +1,6 @@
 import { entrySectionLabels, entryTypeLabels, type LifeEntry } from "@/lib/types";
 import { Cover } from "@/components/ui/cover";
+import { TypeBadge } from "@/components/ui/common";
 import { compactMeta, excerptText, formatDate, getDisplayRating, getRatingBadgeClass, getReactionBadge, normalizeSection } from "@/lib/entries";
 
 export function MediaCard({
@@ -32,8 +33,9 @@ export function MediaCard({
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1.5">
-            <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
-              {entryTypeLabels[entry.type]} · {formatDate(entry.date)}{exactness ? ` · ${exactness}` : ""}
+            <p className="flex flex-wrap items-center gap-x-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted">
+              <TypeBadge entry={entry} />
+              <span>{formatDate(entry.date)}{exactness ? ` · ${exactness}` : ""}</span>
             </p>
             <h3 className="text-base font-medium tracking-[-0.02em] text-foreground">
               {entry.title}

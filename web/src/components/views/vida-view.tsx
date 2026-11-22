@@ -3,6 +3,8 @@ import { EmptyState, ViewHeader } from "@/components/ui/common";
 import { excerptText, formatDate } from "@/lib/entries";
 import { entrySectionLabels, type LifeEntry } from "@/lib/types";
 import { kindOf, quickKindLabels, type QuickKind } from "@/components/ui/quick-add";
+import { typeColor, typeKeyOf } from "@/lib/type-style";
+import { RangosHitos, fechaHito } from "@/components/ui/rangos-hitos";
 
 type Filtro = "todo" | QuickKind;
 
@@ -55,6 +57,10 @@ export function VidaView({ entries, openEntry }: VidaViewProps) {
         }
       />
 
+      {filtro === "todo" || filtro === "milestone" ? (
+        <RangosHitos hitos={entries.filter((e) => kindOf(e) === "milestone")} onOpen={openEntry} />
+      ) : null}
+
       {porAnio.length === 0 ? (
         <EmptyState label="No hay nada acá todavía. Usá el + para agregar." />
       ) : (
@@ -66,7 +72,7 @@ export function VidaView({ entries, openEntry }: VidaViewProps) {
                 const kind = kindOf(e)!;
                 const aprox = e.tags.includes("approx-date");
                 return (
-                  <li key={e.id} className={`timeline-item timeline-${kind}`}>
+                  <li key={e.id} className="timeline-item" style={{ "--dot": typeColor[typeKeyOf(e)] } as React.CSSProperties}>
                     <button
                       type="button"
                       className="w-full rounded-xl border border-border bg-panel px-4 py-3 text-left transition-colors hover:border-accent/40"
@@ -74,8 +80,8 @@ export function VidaView({ entries, openEntry }: VidaViewProps) {
                     >
                       <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">
                         {kind === "note" ? entrySectionLabels[e.section ?? "general"] : quickKindLabels[kind]} ·{" "}
-                        {aprox ? e.date.slice(0, 4) : formatDate(e.date)}
-                        {e.end_date ? ` → ${formatDate(e.end_date)}` : ""}
+                        {kind === "milestone" ? fechaHito(e.date, aprox) : aprox ? e.date.slice(0, 4) : formatDate(e.date)}
+                        {e.end_date ? ` → ${fechaHito(e.end_date, aprox)}` : ""}
                         {aprox ? " · aprox." : ""}
                       </p>
                       <h4 className="mt-1 text-[0.95rem] font-medium tracking-[-0.01em] text-foreground">{e.title}</h4>

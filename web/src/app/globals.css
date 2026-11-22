@@ -14,6 +14,10 @@
   --rose: #b86868;
   --sage: #6aa47e;
   --gold: #c8aa5a;
+  /* Colores de tipo (biblioteca): siempre acompañados del nombre del tipo. */
+  --sky: #5f9fdc;
+  --violet: #a083dc;
+  --teal: #3fb0aa;
 }
 
 @theme inline {
@@ -23,6 +27,7 @@
   --color-surface-strong: var(--surface-strong);
   --color-panel: var(--panel);
   --color-border: var(--border);
+  --color-border-mid: var(--border-mid);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
@@ -864,14 +869,26 @@ a {
   background: var(--muted);
 }
 
-.timeline-milestone::before {
-  background: var(--gold);
+.timeline-item::before {
+  background: var(--dot, var(--muted));
 }
 
-.timeline-note::before {
-  background: var(--sage);
+/* Punto de color + nombre del tipo. */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.timeline-memory::before {
-  background: var(--rose);
+.type-badge::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--dot, var(--muted));
 }

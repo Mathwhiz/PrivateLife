@@ -56,6 +56,10 @@ export type HabitStats = {
   weekdayCounts: number[];
   monthlyCounts: Array<{ year: number; months: number[] }>;
   lastDone: string | null;
+  /** Días en que se marcó, del más nuevo al más viejo. */
+  dates: string[];
+  /** Cada cuántos días, en promedio, en los últimos 90 (null si hay menos de 2). */
+  avgGap90: number | null;
 };
 
 export type HabitViewMode = "checklist" | "detail";

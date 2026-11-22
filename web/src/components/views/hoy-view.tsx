@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { formatDate, todayAR } from "@/lib/entries";
 import { type HabitCatalogItem } from "@/lib/use-habits";
 import { type RegistroSaludState } from "@/lib/use-registro-salud";
-import { entrySectionLabels, entryTypeLabels, type LifeEntry } from "@/lib/types";
-import { kindOf } from "@/components/ui/quick-add";
+import { type LifeEntry } from "@/lib/types";
+import { TypeBadge } from "@/components/ui/common";
 import type { AppView } from "@/lib/app-config";
 
 type HoyViewProps = {
@@ -28,14 +28,6 @@ function fechasDudosas(entries: LifeEntry[]) {
     e.tags.includes("childhood") ||
     /-01-0[12]$/.test(e.date) ||
     (porFecha.get(e.date) ?? 0) > 5;
-}
-
-function etiqueta(entry: LifeEntry) {
-  const kind = kindOf(entry);
-  if (kind === "milestone") return "Hito";
-  if (kind === "memory") return "Recuerdo";
-  if (entry.type === "note") return entrySectionLabels[entry.section ?? "general"];
-  return entryTypeLabels[entry.type];
 }
 
 export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, salud, goTo, openEntry }: HoyViewProps) {
@@ -130,8 +122,9 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
                 {enEsteDia.map((e) => (
                   <li key={e.id}>
                     <button type="button" className="w-full text-left" onClick={() => openEntry(e)}>
-                      <span className="text-xs text-muted">
-                        Hace {anio - Number(e.date.slice(0, 4))} {anio - Number(e.date.slice(0, 4)) === 1 ? "año" : "años"} · {etiqueta(e)}
+                      <span className="flex items-center gap-2 text-xs text-muted">
+                        <TypeBadge entry={e} />
+                        Hace {anio - Number(e.date.slice(0, 4))} {anio - Number(e.date.slice(0, 4)) === 1 ? "año" : "años"}
                       </span>
                       <span className="block truncate text-sm text-foreground">{e.title}</span>
                     </button>
@@ -153,9 +146,9 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
                 className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 rounded-md px-2 py-1.5 text-left hover:bg-accent-soft"
                 onClick={() => openEntry(e)}
               >
-                <span className="min-w-0 truncate text-sm text-foreground">
-                  <span className="mr-2 text-xs text-muted">{etiqueta(e)}</span>
-                  {e.title}
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <TypeBadge entry={e} />
+                  <span className="truncate text-sm text-foreground">{e.title}</span>
                 </span>
                 <span className="text-xs text-muted">{formatDate(e.date)}</span>
               </button>

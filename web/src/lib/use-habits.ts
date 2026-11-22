@@ -164,7 +164,13 @@ export function useHabits(entries: LifeEntry[], habitDate: string, selectedHabit
       .sort((a, b) => b[0] - a[0])
       .map(([year, months]) => ({ year, months }));
 
+    const recientes = uniqueDates.filter((date) => daysBetween(habitDate, date) <= 89 && daysBetween(habitDate, date) >= 0);
+    const avgGap90 =
+      recientes.length >= 2 ? daysBetween(recientes[0], recientes[recientes.length - 1]) / (recientes.length - 1) : null;
+
     return {
+      dates: uniqueDates,
+      avgGap90,
       total: selectedHabitLogs.length,
       week: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 6).length,
       month: selectedHabitLogs.filter((entry) => daysBetween(habitDate, entry.date) <= 29).length,

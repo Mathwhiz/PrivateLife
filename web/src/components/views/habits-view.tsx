@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { EmptyState, ViewHeader } from "@/components/ui/common";
+import { YearHeatmap } from "@/components/ui/heatmap";
 import { defaultHabitDraft, formatDate, type HabitDraft, type HabitStats, type HabitViewMode } from "@/lib/entries";
 import { type LifeEntry } from "@/lib/types";
 
@@ -214,29 +215,33 @@ export function HabitsView({
                       <strong className="stat-value">{habitStats.total}</strong>
                     </article>
                     <article className="stat-card">
-                      <span className="stat-label">Racha actual</span>
+                      <span className="stat-label">Días seguidos</span>
                       <strong className="stat-value">{habitStats.currentStreak}</strong>
                     </article>
                     <article className="stat-card">
-                      <span className="stat-label">Mejor racha</span>
+                      <span className="stat-label">Máx. seguidos</span>
                       <strong className="stat-value">{habitStats.bestStreak}</strong>
                     </article>
                   </div>
 
                   <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                    <div className="flex items-end justify-between gap-3">
+                    <div className="flex flex-wrap items-end justify-between gap-4">
                       <div>
-                        <p className="section-kicker">Constancia</p>
-                        <strong className="mt-2 block text-3xl font-medium text-foreground">
-                          {habitStats.completionRate30}%
+                        <p className="section-kicker">Última vez</p>
+                        <strong className="mt-2 block text-2xl font-medium text-foreground">
+                          {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
                         </strong>
-                        <p className="mt-2 text-sm text-muted">
-                          Porcentaje de dias cumplidos en los ultimos 30 dias.
+                      </div>
+                      <div className="text-right">
+                        <p className="section-kicker">Cada cuánto</p>
+                        <p className="mt-2 text-sm text-foreground">
+                          {habitStats.avgGap90 === null
+                            ? "Poco en los últimos 90 días"
+                            : habitStats.avgGap90 <= 1.05
+                              ? "Todos los días"
+                              : `Cada ${habitStats.avgGap90.toLocaleString("es-AR", { maximumFractionDigits: 1 })} días`}
                         </p>
                       </div>
-                      <p className="text-xs text-muted">
-                        Última vez: {habitStats.lastDone ? formatDate(habitStats.lastDone) : "Nunca"}
-                      </p>
                     </div>
                   </article>
 
@@ -259,38 +264,16 @@ export function HabitsView({
                     </div>
                   </article>
 
-                  {habitStats.monthlyCounts.length > 0 && (
+                  {habitStats.dates.length > 0 ? (
                     <article className="rounded-xl border border-border bg-panel px-4 py-4">
-                      <p className="section-kicker">Por año y mes</p>
-                      <div className="mt-4 grid gap-6">
-                        {habitStats.monthlyCounts.map(({ year, months }) => {
-                          const maxMonth = Math.max(...months, 1);
-                          return (
-                            <div key={year}>
-                              <p className="mb-2 text-xs font-medium text-foreground">{year}</p>
-                              <div className="grid gap-1.5">
-                                {months.map((count, monthIndex) => {
-                                  const label = new Intl.DateTimeFormat("es-AR", { month: "short" }).format(
-                                    new Date(year, monthIndex),
-                                  );
-                                  const width = count === 0 ? 0 : Math.max(4, (count / maxMonth) * 100);
-                                  return (
-                                    <div key={monthIndex} className="grid grid-cols-[36px_minmax(0,1fr)_24px] items-center gap-3">
-                                      <span className="text-xs text-muted capitalize">{label}</span>
-                                      <div className="habit-bar-track">
-                                        <span className="habit-bar-fill" style={{ width: `${width}%` }} />
-                                      </div>
-                                      <span className="text-xs text-foreground">{count}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <p className="section-kicker">Por día</p>
+                      <div className="mt-4 grid gap-5">
+                        {[...new Set(habitStats.dates.map((d) => Number(d.slice(0, 4))))].map((year) => (
+                          <YearHeatmap key={year} year={year} dates={new Set(habitStats.dates)} />
+                        ))}
                       </div>
                     </article>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <EmptyState label="Elegí un ítem para ver estadísticas y editarlo." />

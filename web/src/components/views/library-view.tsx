@@ -1,5 +1,6 @@
-import type { Dispatch, SetStateAction } from "react";
-import { EmptyState, ViewHeader } from "@/components/ui/common";
+import { useState, type Dispatch, type SetStateAction } from "react";
+import { EmptyAction, ViewHeader } from "@/components/ui/common";
+import { CoverTile, MediaFicha } from "@/components/ui/media-ficha";
 import { MediaCard } from "@/components/ui/entry-cards";
 import { MediaEditorForm } from "@/components/ui/media-editor-form";
 import { type EntryType, type LifeEntry } from "@/lib/types";
@@ -49,6 +50,37 @@ export function LibraryView({
   setRatingFilter,
   visibleMedia,
 }: LibraryViewProps) {
+  const [modo, setModo] = useState<"tapas" | "lista">(() => {
+    try {
+      return localStorage.getItem("private-life.biblioteca.modo") === "lista" ? "lista" : "tapas";
+    } catch {
+      return "tapas";
+    }
+  });
+  const [ficha, setFicha] = useState<LifeEntry | null>(null);
+  // Se dibujan de a tandas: son más de mil tapas.
+  // Al cambiar los filtros vuelve a 120 (el límite queda atado a esa lista).
+  const [tanda, setTanda] = useState({ lista: visibleMedia, n: 120 });
+  const limite = tanda.lista === visibleMedia ? tanda.n : 120;
+
+  function cambiarModo(m: "tapas" | "lista") {
+    setModo(m);
+    try {
+      localStorage.setItem("private-life.biblioteca.modo", m);
+    } catch {
+      /* sin storage: queda solo para esta visita */
+    }
+  }
+
+  function editar(entry: LifeEntry) {
+    setFicha(null);
+    openMediaEditor(entry);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const hayFiltros = librarySearch !== "" || ratingFilter !== "all" || genreFilter !== "all-genres";
+  const visibles = visibleMedia.slice(0, limite);
+
   return (
             <div className="space-y-5">
               <ViewHeader
@@ -172,20 +204,70 @@ export function LibraryView({
                 ) : null}
               </div>
 
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted">{visibleMedia.length.toLocaleString("es-AR")} en total</p>
+                <div className="flex gap-1.5">
+                  <button type="button" className={modo === "tapas" ? "filter-button-active" : "filter-button"} onClick={() => cambiarModo("tapas")}>
+                    Tapas
+                  </button>
+                  <button type="button" className={modo === "lista" ? "filter-button-active" : "filter-button"} onClick={() => cambiarModo("lista")}>
+                    Lista
+                  </button>
+                </div>
+              </div>
+
               {visibleMedia.length === 0 ? (
-                <EmptyState label="No hay items para este filtro." />
+                hayFiltros ? (
+                  <EmptyAction
+                    label="No hay nada con estos filtros."
+                    action="Limpiar filtros"
+                    onAction={() => {
+                      setLibrarySearch("");
+                      setRatingFilter("all");
+                      setGenreFilter("all-genres");
+                    }}
+                  />
+                ) : (
+                  <EmptyAction label="Todavía no hay nada acá." action="+ Agregar" onAction={() => openMediaEditor()} />
+                )
+              ) : modo === "tapas" ? (
+                <div className="grid grid-cols-3 gap-x-3 gap-y-4 @lg:grid-cols-4 @2xl:grid-cols-5 @4xl:grid-cols-6 @6xl:grid-cols-8">
+                  {visibles.map((entry) => (
+                    <CoverTile key={entry.id} entry={entry} onOpen={() => setFicha(entry)} />
+                  ))}
+                </div>
               ) : (
                 <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4">
-                  {visibleMedia.map((entry) => (
+                  {visibles.map((entry) => (
                     <MediaCard
                       key={entry.id}
                       entry={entry}
-                      onEdit={() => openMediaEditor(entry)}
+                      onEdit={() => editar(entry)}
                       onDelete={() => deleteEntry(entry.id)}
                     />
                   ))}
                 </div>
               )}
+
+              {visibleMedia.length > limite ? (
+                <div className="flex justify-center">
+                  <button type="button" className="secondary-button" onClick={() => setTanda({ lista: visibleMedia, n: limite + 120 })}>
+                    Mostrar más ({(visibleMedia.length - limite).toLocaleString("es-AR")} restantes)
+                  </button>
+                </div>
+              ) : null}
+
+              {ficha ? (
+                <MediaFicha
+                  entry={ficha}
+                  onClose={() => setFicha(null)}
+                  onEdit={() => editar(ficha)}
+                  onDelete={() => {
+                    deleteEntry(ficha.id);
+                    setFicha(null);
+                  }}
+                />
+              ) : null}
             </div>
   );
 }

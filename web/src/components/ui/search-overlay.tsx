@@ -1,19 +1,13 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { formatDate } from "@/lib/entries";
-import { entrySectionLabels, entryTypeLabels, type EntryType, type LifeEntry } from "@/lib/types";
-import { kindOf, Sheet } from "@/components/ui/quick-add";
+import { entryTypeLabels, type EntryType, type LifeEntry } from "@/lib/types";
+import { Sheet } from "@/components/ui/quick-add";
+import { TypeBadge } from "@/components/ui/common";
 
 const MAX = 60;
 const tipos: EntryType[] = ["movie", "series", "anime", "book", "game", "manga", "note", "memory", "habit"];
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
-function etiqueta(e: LifeEntry) {
-  const kind = kindOf(e);
-  if (kind === "milestone") return "Hito";
-  if (e.type === "note") return entrySectionLabels[e.section ?? "general"];
-  return entryTypeLabels[e.type];
-}
 
 /** Búsqueda en todo el archivo. Sin texto, sirve para recorrer por tipo. */
 export function SearchOverlay({
@@ -84,7 +78,7 @@ export function SearchOverlay({
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm text-foreground">{e.title}</span>
-                <span className="text-xs text-muted">{etiqueta(e)}</span>
+                <TypeBadge entry={e} />
               </span>
               <span className="text-xs text-muted">{formatDate(e.date)}</span>
             </button>
