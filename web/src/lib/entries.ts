@@ -23,6 +23,15 @@ export const systemMediaTags = new Set([
   "wow",
   "approx-date",
   "childhood",
+  // Origen y estado: no son géneros.
+  "jkanime",
+  "manual",
+  "microsoft-store",
+  "riot",
+  "jugando",
+  "pausado",
+  "pendiente",
+  "terminado",
 ]);
 
 export const entryTypes: EntryType[] = ["memory", "habit", "movie", "book", "series", "anime", "manga", "game", "note"];

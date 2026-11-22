@@ -2,7 +2,7 @@ import { useState } from "react";
 import { entryTypeLabels, type EntryType } from "@/lib/types";
 import { MediaTypeConfig } from "@/lib/app-config";
 import { MediaFormState, mediaTypes } from "@/lib/entries";
-import { buscarMetadatos, fuenteLabels, generoATag, type ResultadoMetadatos } from "@/lib/metadatos";
+import { buscarMetadatos, fuenteLabels, generoATags, type ResultadoMetadatos } from "@/lib/metadatos";
 import { Cover } from "@/components/ui/cover";
 
 type Busqueda =
@@ -55,7 +55,7 @@ export function MediaEditorForm({
       cover_url: r.tapa_url ?? form.cover_url,
       external: { source: r.fuente, id: r.id_externo },
     });
-    setGenerosSugeridos([...new Set(r.generos.map(generoATag).filter(Boolean))]);
+    setGenerosSugeridos([...new Set(r.generos.flatMap(generoATags))]);
     setBusqueda({ estado: "inactiva" });
   }
 

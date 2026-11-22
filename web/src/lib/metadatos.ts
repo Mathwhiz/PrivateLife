@@ -38,6 +38,57 @@ export async function buscarMetadatos(tipo: EntryType, q: string, anio?: string)
   return data?.resultados ?? [];
 }
 
+/**
+ * Alias de géneros: inglés, variantes y errores de tipeo -> el tag en
+ * castellano que usa la biblioteca. Algunos de TMDB valen por dos.
+ */
+export const aliasGeneros: Record<string, string[]> = {
+  action: ["accion"],
+  adventure: ["aventura"],
+  aventurua: ["aventura"],
+  avfentura: ["aventura"],
+  animation: ["animacion"],
+  biography: ["biografia"],
+  briografia: ["biografia"],
+  "sci-fi": ["ciencia-ficcion"],
+  "ciencia-ficcon": ["ciencia-ficcion"],
+  comedy: ["comedia"],
+  crime: ["crimen"],
+  deporte: ["deportes"],
+  sport: ["deportes"],
+  documentary: ["documental"],
+  epic: ["epica"],
+  family: ["familia"],
+  fantasy: ["fantasia"],
+  "game-show": ["reality"],
+  "reality-tv": ["reality"],
+  history: ["historia"],
+  horror: ["terror"],
+  misterios: ["misterio"],
+  mystery: ["misterio"],
+  music: ["musica"],
+  politca: ["politica"],
+  short: ["cortometraje"],
+  spy: ["espionaje"],
+  suspense: ["thriller"],
+  "thriller-203": ["thriller"],
+  war: ["guerra"],
+  belica: ["guerra"],
+  // Géneros dobles de TMDB para series.
+  "action-adventure": ["accion", "aventura"],
+  "accion-y-aventura": ["accion", "aventura"],
+  "sci-fi-fantasy": ["ciencia-ficcion", "fantasia"],
+  "ciencia-ficcion-y-fantasia": ["ciencia-ficcion", "fantasia"],
+  "war-politics": ["guerra", "politica"],
+  "belica-y-politica": ["guerra", "politica"],
+};
+
+/** "Ciencia ficción" -> ["ciencia-ficcion"]; "Action & Adventure" -> ["accion", "aventura"]. */
+export function generoATags(genero: string): string[] {
+  const tag = generoATag(genero);
+  return aliasGeneros[tag] ?? (tag ? [tag] : []);
+}
+
 /** "Ciencia ficción" -> "ciencia-ficcion", igual que los tags que ya hay. */
 export function generoATag(genero: string) {
   return genero
