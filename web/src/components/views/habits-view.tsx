@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { EmptyState, ViewHeader } from "@/components/ui/common";
 import { HabitDetail } from "@/components/views/habit-detail";
+import { acento, itemColor } from "@/lib/type-style";
 import { defaultHabitDraft, type HabitDraft, type HabitStats, type HabitViewMode } from "@/lib/entries";
 import { type LifeEntry } from "@/lib/types";
 
@@ -93,7 +94,11 @@ export function HabitsView({
                       {habitCatalog.map((habit) => {
                         const checked = habitsForDay.some((entry) => entry.title === habit.title);
                         return (
-                          <div key={habit.title} className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}>
+                          <div
+                            key={habit.title}
+                            className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}
+                            style={acento(itemColor(habit.title))}
+                          >
                           <button
                             type="button"
                             onClick={() => toggleHabit(habit.title)}

@@ -4,6 +4,7 @@ import { type HabitCatalogItem } from "@/lib/use-habits";
 import { type RegistroSaludState } from "@/lib/use-registro-salud";
 import { type LifeEntry } from "@/lib/types";
 import { TypeBadge } from "@/components/ui/common";
+import { acento, cardColor, itemColor } from "@/lib/type-style";
 import type { AppView } from "@/lib/app-config";
 
 type HoyViewProps = {
@@ -18,6 +19,8 @@ type HoyViewProps = {
 };
 
 const kcal = (n: number) => Math.round(n).toLocaleString("es-AR");
+const fechaCorta = (f: string) =>
+  new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short" }).format(new Date(`${f}T12:00:00`)).replace(".", "");
 
 /** Fechas que no sirven para "En este día": inventadas o de importaciones en bloque. */
 function fechasDudosas(entries: LifeEntry[]) {
@@ -66,7 +69,7 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
       </header>
 
       <div className="grid gap-4 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <section className="rounded-xl border border-border bg-panel px-4 py-4">
+        <section className="rounded-xl border border-border bg-panel px-4 py-4" style={acento(cardColor.agua)}>
           <div className="flex items-baseline justify-between gap-3">
             <p className="section-kicker">Qué hiciste hoy</p>
             <button type="button" className="text-xs text-muted hover:text-foreground" onClick={() => goTo("habits")}>
@@ -77,7 +80,11 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
             {habitCatalog.map((habit) => {
               const checked = doneToday.has(habit.title);
               return (
-                <div key={habit.title} className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}>
+                <div
+                  key={habit.title}
+                  className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}
+                  style={acento(itemColor(habit.title))}
+                >
                   <button type="button" onClick={() => toggleHabitToday(habit.title)} className="habit-toggle-main">
                     <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
                     <span className="truncate">{habit.title}</span>
@@ -92,6 +99,7 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
           <button
             type="button"
             className="rounded-xl border border-border bg-panel px-4 py-4 text-left transition-colors hover:border-accent/40"
+            style={acento(cardColor.verde)}
             onClick={() => goTo("salud")}
           >
             <div className="flex items-baseline justify-between gap-3">
@@ -101,14 +109,14 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
             {ultimoDia ? (
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
-                  <span className="stat-label">{ultimoDia.fecha === hoy ? "Comido hoy" : `Comido ${formatDate(ultimoDia.fecha).slice(0, 6)}`}</span>
+                  <span className="stat-label">{ultimoDia.fecha === hoy ? "Comido hoy" : `Comido ${fechaCorta(ultimoDia.fecha)}`}</span>
                   <span className="stat-value">{kcal(ultimoDia.kcalComidas)}</span>
                   <span className="mt-1 block text-xs text-muted">kcal{ultimoDia.kcalEjercicio ? ` · −${kcal(ultimoDia.kcalEjercicio)} movimiento` : ""}</span>
                 </div>
                 <div>
                   <span className="stat-label">Peso</span>
                   <span className="stat-value">{ultimoPeso ? ultimoPeso.peso!.toLocaleString("es-AR") : "—"}</span>
-                  <span className="mt-1 block text-xs text-muted">{ultimoPeso ? `kg · ${formatDate(ultimoPeso.fecha).slice(0, 6)}` : ""}</span>
+                  <span className="mt-1 block text-xs text-muted">{ultimoPeso ? `kg · ${fechaCorta(ultimoPeso.fecha)}` : ""}</span>
                 </div>
               </div>
             ) : (
@@ -117,7 +125,7 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
           </button>
 
           {enEsteDia.length > 0 ? (
-            <section className="rounded-xl border border-border bg-panel px-4 py-4">
+            <section className="rounded-xl border border-border bg-panel px-4 py-4" style={acento(cardColor.oro)}>
               <p className="section-kicker">En este día</p>
               <ul className="mt-3 grid gap-2">
                 {enEsteDia.map((e) => (
@@ -140,6 +148,7 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-panel px-4 py-4 text-left transition-colors hover:border-accent/40"
+        style={acento(cardColor.violeta)}
         onClick={() => goTo("resumen")}
       >
         <span>
@@ -149,7 +158,7 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
         <span className="text-xs text-muted">Ver ›</span>
       </button>
 
-      <section className="rounded-xl border border-border bg-panel px-4 py-4">
+      <section className="rounded-xl border border-border bg-panel px-4 py-4" style={acento(cardColor.cielo)}>
         <p className="section-kicker">Lo último</p>
         <ul className="mt-3 grid gap-1">
           {recientes.map((e) => (

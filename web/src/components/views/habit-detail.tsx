@@ -2,6 +2,7 @@ import { useState } from "react";
 import { YearHeatmap } from "@/components/ui/heatmap";
 import { daysBetween, formatDate, todayAR, type HabitStats } from "@/lib/entries";
 import { type HabitCatalogItem } from "@/lib/use-habits";
+import { acento, itemColor } from "@/lib/type-style";
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -50,7 +51,7 @@ export function HabitDetail({
         : `cada ${stats.avgGap90.toLocaleString("es-AR", { maximumFractionDigits: 1 })} d`;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" style={acento(itemColor(habit.title))}>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="secondary-button" onClick={onBack}>
           ‹ Volver

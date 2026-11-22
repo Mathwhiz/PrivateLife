@@ -16,6 +16,7 @@ import { LoginScreen } from "@/components/login-screen";
 import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
 import { HabitDraft, HabitViewMode, daysBetween, isPendiente, MediaFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
 import { useHabits } from "@/lib/use-habits";
+import { acento, sectionColor } from "@/lib/type-style";
 import { useRegistroSalud } from "@/lib/use-registro-salud";
 import { HabitsView } from "@/components/views/habits-view";
 import { HoyView } from "@/components/views/hoy-view";
@@ -633,7 +634,10 @@ export function PrivateLifeApp() {
   const navItems = appConfig.sidebar.filter((item) => item.visible);
 
   return (
-    <main className="app-shell mx-auto flex w-full max-w-[2200px] flex-col px-3 py-3 sm:px-4 lg:px-5">
+    <main
+      className="app-shell mx-auto flex w-full max-w-[2200px] flex-col px-3 py-3 sm:px-4 lg:px-5"
+      style={acento(sectionColor[activeView])}
+    >
       {syncConflict && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold/30 bg-gold/10 px-4 py-2.5 text-sm text-gold">
           <span>Se editó desde otro dispositivo. Elegí con cuál te quedás.</span>

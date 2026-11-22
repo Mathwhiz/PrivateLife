@@ -31,3 +31,44 @@ export function typeLabelOf(entry: LifeEntry): string {
   if (key === "note") return entrySectionLabels[entry.section ?? "general"];
   return entryTypeLabels[entry.type];
 }
+
+// ─── Color por sección y por ítem ─────────────────────────────────────
+// Se aplican redefiniendo --accent: todo lo que usa el acento (menú,
+// filtros, barras, mapas de calor, gráficos) toma ese color solo.
+
+const HEX = {
+  ambar: "#c8905a",
+  cielo: "#5f9fdc",
+  agua: "#3fb0aa",
+  verde: "#6aa47e",
+  oro: "#c8aa5a",
+  rosa: "#c96f6f",
+  violeta: "#a083dc",
+  coral: "#e07a5f",
+} as const;
+
+export const sectionColor: Record<string, string> = {
+  hoy: HEX.ambar,
+  habits: HEX.agua,
+  library: HEX.cielo,
+  vida: HEX.oro,
+  salud: HEX.verde,
+  resumen: HEX.violeta,
+  ajustes: HEX.ambar,
+};
+
+export const cardColor = HEX;
+
+const paletaItems = [HEX.ambar, HEX.cielo, HEX.agua, HEX.verde, HEX.oro, HEX.rosa, HEX.violeta, HEX.coral];
+
+/** Color fijo de un ítem del Registro, siempre el mismo para el mismo nombre. */
+export function itemColor(title: string) {
+  let h = 0;
+  for (const c of title.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return paletaItems[h % paletaItems.length];
+}
+
+/** Estilo que pinta un bloque (y todo lo de adentro) con ese color de acento. */
+export function acento(hex: string) {
+  return { "--accent": hex, "--accent-soft": `${hex}26` } as React.CSSProperties;
+}

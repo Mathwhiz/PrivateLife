@@ -79,7 +79,7 @@ a {
   font-weight: 500;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--accent) 88%, var(--muted));
 }
 
 .section-title {
@@ -351,8 +351,8 @@ a {
 }
 
 .habit-toggle-pill-active {
-  background: var(--accent-soft);
-  border-color: rgba(200, 144, 90, 0.32);
+  background: color-mix(in srgb, var(--accent) 17%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .habit-toggle-main {
@@ -371,7 +371,7 @@ a {
   width: 1rem;
   height: 1rem;
   border-radius: 0.22rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
   font-size: 0.65rem;
   flex: 0 0 auto;
   color: var(--accent);
@@ -380,7 +380,9 @@ a {
 
 .habit-toggle-pill-active .habit-toggle-box {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--accent);
+  color: #131315;
+  font-weight: 700;
 }
 
 .habit-add-button {
