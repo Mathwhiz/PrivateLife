@@ -21,10 +21,14 @@ export type FilaRegistro =
   | { tipo: "grupo"; nombre: string; items: { item: HabitCatalogItem; etiqueta: string }[] };
 
 /** Nombre corto de cada tick: si todos repiten el nombre del primero ("… 2", "… 3"), quedan 1, 2, 3. */
-function etiquetas(items: HabitCatalogItem[]) {
+function etiquetas(items: HabitCatalogItem[], grupo: string) {
   const base = items[0].title;
   const repetidos = items.every((it) => it.title.startsWith(base));
-  if (!repetidos || items.length < 2) return items.map((it) => it.title);
+  if (!repetidos || items.length < 2) {
+    // "Leer JW" dentro del grupo JW se ve como "Leer" (el grupo ya lo dice).
+    const sinGrupo = new RegExp(`\\s*\\b${grupo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b\\s*`, "i");
+    return items.map((it) => it.title.replace(sinGrupo, " ").trim() || it.title);
+  }
   return items.map((it, i) => it.title.slice(base.length).trim() || String(i + 1));
 }
 
@@ -50,7 +54,7 @@ export function armarFilas(catalogo: HabitCatalogItem[]): FilaRegistro[] {
     const items = [...porGrupo.get(g)!].sort(
       (a, b) => cabeza(a.title) - cabeza(b.title) || a.title.localeCompare(b.title, "es", { numeric: true }),
     );
-    const nombres = etiquetas(items);
+    const nombres = etiquetas(items, g);
     filas.push({ tipo: "grupo", nombre: g, items: items.map((item, i) => ({ item, etiqueta: nombres[i] })) });
   }
   // Los grupos ocupan todo el ancho: arriba, para no dejar huecos entre los sueltos.
