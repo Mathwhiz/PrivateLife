@@ -16,7 +16,7 @@ import { LoginScreen } from "@/components/login-screen";
 import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
 import { HabitDraft, HabitViewMode, daysBetween, isPendiente, MediaFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
 import { useHabits } from "@/lib/use-habits";
-import { ARCHIVADO, GRUPO_PREFIJO, esArchivado, grupoDe } from "@/lib/grupos";
+import { ARCHIVADO, GRUPO_PREFIJO, esArchivado, esEtiquetaDePlantilla, grupoDe, tambienMarca } from "@/lib/grupos";
 import { acento, sectionColor } from "@/lib/type-style";
 import { useRegistroSalud } from "@/lib/use-registro-salud";
 import { HabitsView } from "@/components/views/habits-view";
@@ -313,12 +313,22 @@ export function PrivateLifeApp() {
   }
 
   function toggleHabit(title: string, date = habitDate) {
-    const existing = habitLogs.find((entry) => entry.title === title && entry.date === date);
+    const marcar = !habitLogs.some((entry) => entry.title === title && entry.date === date);
+    ponerHabito(title, date, marcar);
+    // Ítems enlazados (ej.: Libro → Leer) siguen al que se tocó.
+    const habitMeta = habitCatalog.find((habit) => habit.title === title);
+    for (const otro of habitMeta ? tambienMarca(habitMeta) : []) {
+      if (otro !== title) ponerHabito(otro, date, marcar);
+    }
+  }
 
-    if (existing) {
-      setEntries((current) => current.filter((entry) => entry.id !== existing.id));
+  function ponerHabito(title: string, date: string, marcar: boolean) {
+    const existing = habitLogs.find((entry) => entry.title === title && entry.date === date);
+    if (!marcar) {
+      if (existing) setEntries((current) => current.filter((entry) => entry.id !== existing.id));
       return;
     }
+    if (existing) return;
 
     const habitMeta = habitCatalog.find((habit) => habit.title === title);
     createEntry({
@@ -328,7 +338,7 @@ export function PrivateLifeApp() {
       title,
       content: habitMeta?.content ?? "Registro diario del habito.",
       date,
-      tags: [...new Set(["habit", ...(habitMeta?.tags ?? []).filter((tag) => tag !== ARCHIVADO && !tag.startsWith(GRUPO_PREFIJO))])],
+      tags: [...new Set(["habit", ...(habitMeta?.tags ?? []).filter((tag) => !esEtiquetaDePlantilla(tag))])],
     });
   }
 

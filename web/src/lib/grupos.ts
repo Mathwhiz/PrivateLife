@@ -14,6 +14,15 @@ export function grupoDe(item: { tags: string[] }) {
   return item.tags.find((t) => t.startsWith(GRUPO_PREFIJO))?.slice(GRUPO_PREFIJO.length).trim() || null;
 }
 
+/** "marca:Leer" en la plantilla de Libro: marcar Libro marca también Leer (y desmarcarlo lo desmarca). */
+export const MARCA_PREFIJO = "marca:";
+export const tambienMarca = (item: { tags: string[] }) =>
+  item.tags.filter((t) => t.startsWith(MARCA_PREFIJO)).map((t) => t.slice(MARCA_PREFIJO.length).trim()).filter(Boolean);
+
+/** Etiquetas que configuran el ítem: viven solo en la plantilla, nunca se copian a cada registro. */
+export const esEtiquetaDePlantilla = (tag: string) =>
+  tag === ARCHIVADO || tag.startsWith(GRUPO_PREFIJO) || tag.startsWith(MARCA_PREFIJO);
+
 export const esArchivado = (item: { tags: string[] }) => item.tags.includes(ARCHIVADO);
 
 export type FilaRegistro =

@@ -10,10 +10,10 @@ import {
   type HabitStats,
 } from "@/lib/entries";
 import { quickHabits, type LifeEntry } from "@/lib/types";
-import { ARCHIVADO, GRUPO_PREFIJO } from "@/lib/grupos";
+import { esEtiquetaDePlantilla } from "@/lib/grupos";
 
 /** El grupo y el archivado los define solo la plantilla, nunca un registro suelto. */
-const etiquetaDeRegistro = (tag: string) => tag !== "habit" && tag !== ARCHIVADO && !tag.startsWith(GRUPO_PREFIJO);
+const etiquetaDeRegistro = (tag: string) => tag !== "habit" && !esEtiquetaDePlantilla(tag);
 
 export type HabitCatalogItem = { title: string; tags: string[]; content: string };
 
