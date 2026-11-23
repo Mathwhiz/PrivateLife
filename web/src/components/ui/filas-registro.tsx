@@ -37,6 +37,9 @@ export function FilasRegistro({ filas, hecho, toggle, onVer }: Props) {
         const marcados = fila.items.filter(({ item }) => hecho(item.title));
         const todos = marcados.length === fila.items.length;
         const alguno = marcados.length > 0;
+        // "Marcar todo" solo tiene sentido si el grupo es una actividad que trae las demás (JW → Jw).
+        // En Vicio, Entretenimiento o Del día son cosas distintas: se marcan de a una.
+        const conTodo = fila.items.some(({ item }) => item.title.toLowerCase() === fila.nombre.toLowerCase());
         return (
           <div
             key={`grupo-${fila.nombre}`}
@@ -44,18 +47,22 @@ export function FilasRegistro({ filas, hecho, toggle, onVer }: Props) {
             style={acento(itemColor(fila.nombre))}
           >
             <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                className="habit-group-name"
-                onClick={() => {
-                  // Todo de una: marca lo que falta; si ya estaba todo, lo desmarca.
-                  for (const { item } of fila.items) if (todos || !hecho(item.title)) toggle(item.title);
-                }}
-                title={todos ? "Desmarcar todo" : "Marcar todo"}
-              >
-                <span className="habit-toggle-box">{todos ? "✓" : alguno ? "–" : ""}</span>
-                <span className="truncate">{fila.nombre}</span>
-              </button>
+              {conTodo ? (
+                <button
+                  type="button"
+                  className="habit-group-name"
+                  onClick={() => {
+                    // Todo de una: marca lo que falta; si ya estaba todo, lo desmarca.
+                    for (const { item } of fila.items) if (todos || !hecho(item.title)) toggle(item.title);
+                  }}
+                  title={todos ? "Desmarcar todo" : "Marcar todo"}
+                >
+                  <span className="habit-toggle-box">{todos ? "✓" : alguno ? "–" : ""}</span>
+                  <span className="truncate">{fila.nombre}</span>
+                </button>
+              ) : (
+                <span className="habit-group-name text-muted">{fila.nombre}</span>
+              )}
               {onVer ? (
                 <button type="button" className="habit-inline-link" onClick={() => onVer(fila.items[0].item.title)}>
                   Ver
