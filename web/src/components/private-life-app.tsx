@@ -16,6 +16,7 @@ import { LoginScreen } from "@/components/login-screen";
 import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
 import { HabitDraft, HabitViewMode, daysBetween, isPendiente, MediaFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
 import { useHabits } from "@/lib/use-habits";
+import { ARCHIVADO, GRUPO_PREFIJO, esArchivado, grupoDe } from "@/lib/grupos";
 import { acento, sectionColor } from "@/lib/type-style";
 import { useRegistroSalud } from "@/lib/use-registro-salud";
 import { HabitsView } from "@/components/views/habits-view";
@@ -215,9 +216,19 @@ export function PrivateLifeApp() {
     for (const entry of habitLogs) {
       if (daysBetween(today, entry.date) <= 44) counts.set(entry.title, (counts.get(entry.title) ?? 0) + 1);
     }
-    const active = habitCatalog.filter((habit) => counts.has(habit.title));
-    return [...(active.length ? active : habitCatalog)].sort((a, b) => (counts.get(b.title) ?? 0) - (counts.get(a.title) ?? 0));
-  }, [habitCatalog, habitLogs, today]);
+    // Recién creados también, aunque todavía no se hayan marcado (ej.: Correr, Caminar).
+    const nuevos = new Set(
+      habitTemplateEntries.filter((entry) => daysBetween(today, entry.date) <= 44).map((entry) => entry.title),
+    );
+    const usables = habitCatalog.filter((habit) => !esArchivado(habit));
+    const gruposActivos = new Set(
+      usables.filter((h) => counts.has(h.title) || nuevos.has(h.title)).map(grupoDe).filter(Boolean),
+    );
+    const active = usables.filter(
+      (habit) => counts.has(habit.title) || nuevos.has(habit.title) || gruposActivos.has(grupoDe(habit)),
+    );
+    return [...(active.length ? active : usables)].sort((a, b) => (counts.get(b.title) ?? 0) - (counts.get(a.title) ?? 0));
+  }, [habitCatalog, habitLogs, habitTemplateEntries, today]);
 
   // Todo menos los registros de hábitos (son ~8.400 y solo ensucian listas y búsqueda).
   const lifeEntries = useMemo(() => normalizedEntries.filter((entry) => entry.type !== "habit"), [normalizedEntries]);
@@ -319,7 +330,7 @@ export function PrivateLifeApp() {
       title,
       content: habitMeta?.content ?? "Registro diario del habito.",
       date,
-      tags: [...new Set(["habit", ...(habitMeta?.tags ?? [])])],
+      tags: [...new Set(["habit", ...(habitMeta?.tags ?? []).filter((tag) => tag !== ARCHIVADO && !tag.startsWith(GRUPO_PREFIJO))])],
     });
   }
 
@@ -333,7 +344,9 @@ export function PrivateLifeApp() {
       originalTitle: title,
       title,
       content: habitMeta.content,
-      tags: habitMeta.tags.join(", "),
+      tags: habitMeta.tags.filter((tag) => tag !== ARCHIVADO && !tag.startsWith(GRUPO_PREFIJO)).join(", "),
+      group: grupoDe(habitMeta) ?? "",
+      archived: esArchivado(habitMeta),
     });
     setIsHabitComposerOpen(true);
   }
@@ -360,7 +373,9 @@ export function PrivateLifeApp() {
         ...habitDraft.tags
           .split(",")
           .map((tag) => tag.trim())
-          .filter(Boolean),
+          .filter((tag) => tag && tag !== ARCHIVADO && !tag.startsWith(GRUPO_PREFIJO)),
+        ...(habitDraft.group.trim() ? [`${GRUPO_PREFIJO}${habitDraft.group.trim()}`] : []),
+        ...(habitDraft.archived ? [ARCHIVADO] : []),
       ],
       };
 

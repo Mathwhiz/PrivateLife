@@ -1,0 +1,58 @@
+import { type HabitCatalogItem } from "@/lib/use-habits";
+
+/**
+ * Grupos del Registro: varios ítems que se muestran en una sola fila con un tick
+ * cada uno (ej.: Dientes 1·2·3, JW con Estudiar/Leer/Escribir). Cada tick sigue
+ * siendo su propio ítem, así que las estadísticas y el historial no cambian.
+ * El grupo se guarda como etiqueta "grupo:<Nombre>" en la plantilla del ítem.
+ */
+export const GRUPO_PREFIJO = "grupo:";
+/** Ítems que ya no se usan: siguen con sus estadísticas pero no aparecen para marcar. */
+export const ARCHIVADO = "archivado";
+
+export function grupoDe(item: { tags: string[] }) {
+  return item.tags.find((t) => t.startsWith(GRUPO_PREFIJO))?.slice(GRUPO_PREFIJO.length).trim() || null;
+}
+
+export const esArchivado = (item: { tags: string[] }) => item.tags.includes(ARCHIVADO);
+
+export type FilaRegistro =
+  | { tipo: "solo"; item: HabitCatalogItem }
+  | { tipo: "grupo"; nombre: string; items: { item: HabitCatalogItem; etiqueta: string }[] };
+
+/** Nombre corto de cada tick: si todos repiten el nombre del primero ("… 2", "… 3"), quedan 1, 2, 3. */
+function etiquetas(items: HabitCatalogItem[]) {
+  const base = items[0].title;
+  const repetidos = items.every((it) => it.title.startsWith(base));
+  if (!repetidos || items.length < 2) return items.map((it) => it.title);
+  return items.map((it, i) => it.title.slice(base.length).trim() || String(i + 1));
+}
+
+/** Arma las filas: primero los grupos (en el orden de su primer ítem), después los sueltos. */
+export function armarFilas(catalogo: HabitCatalogItem[]): FilaRegistro[] {
+  const porGrupo = new Map<string, HabitCatalogItem[]>();
+  for (const item of catalogo) {
+    const g = grupoDe(item);
+    if (g) porGrupo.set(g, [...(porGrupo.get(g) ?? []), item]);
+  }
+  const filas: FilaRegistro[] = [];
+  const puestos = new Set<string>();
+  for (const item of catalogo) {
+    const g = grupoDe(item);
+    if (!g) {
+      filas.push({ tipo: "solo", item });
+      continue;
+    }
+    if (puestos.has(g)) continue;
+    puestos.add(g);
+    // Orden fijo: primero el que se llama como el grupo (JW → Jw), después por nombre ("… 2" antes de "… 3").
+    const cabeza = (t: string) => (t.toLowerCase() === g.toLowerCase() ? 0 : 1);
+    const items = [...porGrupo.get(g)!].sort(
+      (a, b) => cabeza(a.title) - cabeza(b.title) || a.title.localeCompare(b.title, "es", { numeric: true }),
+    );
+    const nombres = etiquetas(items);
+    filas.push({ tipo: "grupo", nombre: g, items: items.map((item, i) => ({ item, etiqueta: nombres[i] })) });
+  }
+  // Los grupos ocupan todo el ancho: arriba, para no dejar huecos entre los sueltos.
+  return [...filas.filter((f) => f.tipo === "grupo"), ...filas.filter((f) => f.tipo === "solo")];
+}

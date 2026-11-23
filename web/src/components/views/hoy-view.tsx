@@ -4,7 +4,9 @@ import { type HabitCatalogItem } from "@/lib/use-habits";
 import { type RegistroSaludState } from "@/lib/use-registro-salud";
 import { type LifeEntry } from "@/lib/types";
 import { TypeBadge } from "@/components/ui/common";
-import { acento, cardColor, itemColor } from "@/lib/type-style";
+import { acento, cardColor, typeKeyOf } from "@/lib/type-style";
+import { armarFilas } from "@/lib/grupos";
+import { FilasRegistro } from "@/components/ui/filas-registro";
 import type { AppView } from "@/lib/app-config";
 
 type HoyViewProps = {
@@ -46,13 +48,24 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
       .slice(0, 8);
   }, [entries, hoy]);
 
-  const recientes = useMemo(
-    () =>
-      [...entries]
-        .sort((a, b) => (b.created_at ?? `${b.date}T00`).localeCompare(a.created_at ?? `${a.date}T00`))
-        .slice(0, 5),
-    [entries],
-  );
+  const filas = useMemo(() => armarFilas(habitCatalog), [habitCatalog]);
+
+  // Lo último, variado: hasta 2 de cada tipo, así no son 5 juegos seguidos.
+  const recientes = useMemo(() => {
+    const ordenadas = [...entries].sort((a, b) =>
+      (b.created_at ?? `${b.date}T00`).localeCompare(a.created_at ?? `${a.date}T00`),
+    );
+    const porTipo = new Map<string, number>();
+    const elegidas: LifeEntry[] = [];
+    for (const e of ordenadas.slice(0, 400)) {
+      const tipo = typeKeyOf(e);
+      if ((porTipo.get(tipo) ?? 0) >= 2) continue;
+      porTipo.set(tipo, (porTipo.get(tipo) ?? 0) + 1);
+      elegidas.push(e);
+      if (elegidas.length === 6) break;
+    }
+    return elegidas;
+  }, [entries]);
 
   const ultimoDia = salud.dias[0] ?? null;
   const ultimoPeso = salud.dias.find((d) => d.peso !== null) ?? null;
@@ -77,21 +90,7 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
             </button>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            {habitCatalog.map((habit) => {
-              const checked = doneToday.has(habit.title);
-              return (
-                <div
-                  key={habit.title}
-                  className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}
-                  style={acento(itemColor(habit.title))}
-                >
-                  <button type="button" onClick={() => toggleHabitToday(habit.title)} className="habit-toggle-main">
-                    <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
-                    <span className="truncate">{habit.title}</span>
-                  </button>
-                </div>
-              );
-            })}
+            <FilasRegistro filas={filas} hecho={(t) => doneToday.has(t)} toggle={toggleHabitToday} />
           </div>
         </section>
 

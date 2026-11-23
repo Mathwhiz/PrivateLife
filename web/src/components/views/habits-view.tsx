@@ -1,7 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 import { EmptyState, ViewHeader } from "@/components/ui/common";
 import { HabitDetail } from "@/components/views/habit-detail";
-import { acento, itemColor } from "@/lib/type-style";
+import { armarFilas, esArchivado, grupoDe } from "@/lib/grupos";
+import { FilasRegistro } from "@/components/ui/filas-registro";
 import { defaultHabitDraft, type HabitDraft, type HabitStats, type HabitViewMode } from "@/lib/entries";
 import { type LifeEntry } from "@/lib/types";
 
@@ -91,37 +92,15 @@ export function HabitsView({
                   </div>
 
                     <div className="grid gap-2 @xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4">
-                      {habitCatalog.map((habit) => {
-                        const checked = habitsForDay.some((entry) => entry.title === habit.title);
-                        return (
-                          <div
-                            key={habit.title}
-                            className={`habit-toggle-pill ${checked ? "habit-toggle-pill-active" : ""}`}
-                            style={acento(itemColor(habit.title))}
-                          >
-                          <button
-                            type="button"
-                            onClick={() => toggleHabit(habit.title)}
-                            className="habit-toggle-main"
-                          >
-                              <span className="habit-toggle-box">{checked ? "✓" : ""}</span>
-                              <span className="truncate">{habit.title}</span>
-                            </button>
-                            <div className="habit-inline-actions">
-                              <button
-                                type="button"
-                                className="habit-inline-link"
-                                onClick={() => {
-                                  setSelectedHabit(habit.title);
-                                  setHabitViewMode("detail");
-                                }}
-                              >
-                                Ver
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      <FilasRegistro
+                        filas={armarFilas(habitCatalog.filter((h) => !esArchivado(h)))}
+                        hecho={(t) => habitsForDay.some((entry) => entry.title === t)}
+                        toggle={toggleHabit}
+                        onVer={(t) => {
+                          setSelectedHabit(t);
+                          setHabitViewMode("detail");
+                        }}
+                      />
                     </div>
 
                   {isHabitComposerOpen ? (
@@ -155,6 +134,32 @@ export function HabitsView({
                         placeholder="salud, rutina, estudio"
                         className="field"
                       />
+                      <label className="grid gap-1.5 text-xs">
+                        <span className="text-muted">
+                          Grupo (opcional): los ítems con el mismo grupo van juntos en una fila, con un tick cada uno.
+                        </span>
+                        <input
+                          type="text"
+                          list="grupos-registro"
+                          value={habitDraft.group}
+                          onChange={(event) => setHabitDraft((current) => ({ ...current, group: event.target.value }))}
+                          placeholder="ej.: JW, Ejercicio, Dientes"
+                          className="field"
+                        />
+                        <datalist id="grupos-registro">
+                          {[...new Set(habitCatalog.map(grupoDe).filter(Boolean))].map((g) => (
+                            <option key={g} value={g!} />
+                          ))}
+                        </datalist>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-muted">
+                        <input
+                          type="checkbox"
+                          checked={habitDraft.archived}
+                          onChange={(event) => setHabitDraft((current) => ({ ...current, archived: event.target.checked }))}
+                        />
+                        Ya no lo uso (deja de aparecer para marcar, pero guarda sus estadísticas)
+                      </label>
                       <textarea
                         value={habitDraft.content}
                         onChange={(event) => setHabitDraft((current) => ({ ...current, content: event.target.value }))}

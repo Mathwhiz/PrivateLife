@@ -58,6 +58,10 @@ export type HabitDraft = {
   title: string;
   content: string;
   tags: string;
+  /** Grupo del Registro (una fila con varios ticks). Vacío = suelto. */
+  group: string;
+  /** Ya no se usa: no aparece para marcar, pero conserva sus estadísticas. */
+  archived: boolean;
 };
 
 export type HabitStats = {
@@ -110,6 +114,8 @@ export const defaultHabitDraft = (): HabitDraft => ({
   title: "",
   content: "",
   tags: "",
+  group: "",
+  archived: false,
 });
 
 export function defaultMediaForm(type: EntryType = "movie"): MediaFormState {

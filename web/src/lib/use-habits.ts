@@ -10,6 +10,10 @@ import {
   type HabitStats,
 } from "@/lib/entries";
 import { quickHabits, type LifeEntry } from "@/lib/types";
+import { ARCHIVADO, GRUPO_PREFIJO } from "@/lib/grupos";
+
+/** El grupo y el archivado los define solo la plantilla, nunca un registro suelto. */
+const etiquetaDeRegistro = (tag: string) => tag !== "habit" && tag !== ARCHIVADO && !tag.startsWith(GRUPO_PREFIJO);
 
 export type HabitCatalogItem = { title: string; tags: string[]; content: string };
 
@@ -75,7 +79,7 @@ export function useHabits(entries: LifeEntry[], habitDate: string, selectedHabit
       if (!existing) {
         catalog.set(entry.title, {
           title: entry.title,
-          tags: entry.tags.filter((tag) => tag !== "habit"),
+          tags: entry.tags.filter(etiquetaDeRegistro),
           content: entry.content,
         });
         continue;
@@ -83,7 +87,7 @@ export function useHabits(entries: LifeEntry[], habitDate: string, selectedHabit
 
       catalog.set(entry.title, {
         title: entry.title,
-        tags: [...new Set([...existing.tags, ...entry.tags.filter((tag) => tag !== "habit")])],
+        tags: [...new Set([...existing.tags, ...entry.tags.filter(etiquetaDeRegistro)])],
         content: existing.content || entry.content,
       });
     }
