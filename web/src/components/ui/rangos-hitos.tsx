@@ -24,7 +24,7 @@ export function finHito(h: LifeEntry) {
 
 /** Color de la barra según de qué es el hito. */
 const colorHito = (h: LifeEntry) =>
-  h.tags.includes("estudio") ? "var(--sky)" : h.tags.includes("trabajo") ? "#e07a5f" : "var(--gold)";
+  h.tags.includes("estudio") ? "var(--sky)" : h.tags.includes("trabajo") ? "#e07a5f" : h.tags.includes("pareja") ? "#d98bb3" : "var(--gold)";
 
 /** Los hitos con "hasta", como barras sobre una línea de años. */
 export function RangosHitos({ hitos, onOpen }: { hitos: LifeEntry[]; onOpen: (e: LifeEntry) => void }) {
@@ -56,10 +56,11 @@ export function RangosHitos({ hitos, onOpen }: { hitos: LifeEntry[]; onOpen: (e:
     <section className="rounded-xl border border-border bg-panel px-4 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="section-kicker">Períodos</p>
-        <p className="flex gap-3 text-xs text-muted">
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
           {[
             ["Estudio", "var(--sky)"],
             ["Trabajo", "#e07a5f"],
+            ["Pareja", "#d98bb3"],
             ["JW", "var(--gold)"],
           ].map(([nombre, color]) => (
             <span key={nombre} className="inline-flex items-center gap-1.5">
