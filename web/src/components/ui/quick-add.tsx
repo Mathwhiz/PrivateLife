@@ -3,7 +3,10 @@ import { makeEntryId, todayAR } from "@/lib/entries";
 import { entrySectionLabels, entryTypeLabels, type EntrySection, type EntryType, type LifeEntry } from "@/lib/types";
 
 /** Lo que se carga desde el "+" sin pasar por la biblioteca. */
-export type QuickKind = "note" | "memory" | "milestone";
+export type QuickKind = "note" | "memory" | "milestone" | "trip";
+
+/** Hitos y viajes tienen "desde" y "hasta" y un título obligatorio. */
+const conRango = (kind: QuickKind) => kind === "milestone" || kind === "trip";
 
 export type QuickDraft = {
   kind: QuickKind;
@@ -21,6 +24,7 @@ export const quickKindLabels: Record<QuickKind, string> = {
   note: "Texto",
   memory: "Recuerdo",
   milestone: "Hito",
+  trip: "Viaje",
 };
 
 const noteSections: EntrySection[] = ["thought", "philosophy", "general"];
@@ -39,7 +43,7 @@ export function newDraft(kind: QuickKind): QuickDraft {
 
 export function kindOf(entry: LifeEntry): QuickKind | null {
   if (entry.type === "note") return "note";
-  if (entry.type === "memory") return entry.tags.includes("milestone") ? "milestone" : "memory";
+  if (entry.type === "memory") return entry.tags.includes("milestone") ? "milestone" : entry.tags.includes("viaje") ? "trip" : "memory";
   return null;
 }
 
@@ -54,7 +58,7 @@ export function entryToDraft(entry: LifeEntry): QuickDraft | null {
     date: entry.date,
     end_date: entry.end_date ?? "",
     section: entry.section ?? newDraft(kind).section,
-    tags: entry.tags.filter((t) => t !== "milestone").join(", "),
+    tags: entry.tags.filter((t) => t !== "milestone" && t !== "viaje").join(", "),
   };
 }
 
@@ -68,11 +72,12 @@ export function draftToEntry(draft: QuickDraft, existing: LifeEntry | undefined,
     .map((t) => t.trim())
     .filter(Boolean);
   if (draft.kind === "milestone") tags.push("milestone");
+  if (draft.kind === "trip") tags.push("viaje");
 
   const type: EntryType = draft.kind === "note" ? "note" : "memory";
   let id = existing?.id ?? draft.id;
   if (!id) {
-    const base = makeEntryId(draft.kind === "milestone" ? "hito" : type, draft.date, draft.title || draft.content.slice(0, 24));
+    const base = makeEntryId(draft.kind === "milestone" ? "hito" : draft.kind === "trip" ? "viaje" : type, draft.date, draft.title || draft.content.slice(0, 24));
     id = base;
     for (let n = 2; takenIds.has(id); n += 1) id = `${base}-${n}`;
   }
@@ -88,7 +93,7 @@ export function draftToEntry(draft: QuickDraft, existing: LifeEntry | undefined,
     tags: [...new Set(tags)],
     created_at: existing?.created_at ?? (existing ? undefined : new Date().toISOString()),
   };
-  if (draft.kind === "milestone" && draft.end_date) entry.end_date = draft.end_date;
+  if (conRango(draft.kind) && draft.end_date) entry.end_date = draft.end_date;
   else delete entry.end_date;
   if (!entry.created_at) delete entry.created_at;
   return entry;
@@ -113,8 +118,8 @@ export function QuickAddChooser({
   return (
     <Sheet title="Agregar" onClose={onClose}>
       <p className="section-kicker">Escribir</p>
-      <div className="mt-2 grid grid-cols-3 gap-2">
-        {(["note", "memory", "milestone"] as QuickKind[]).map((kind) => (
+      <div className="mt-2 grid grid-cols-2 gap-2 @sm:grid-cols-4">
+        {(["note", "memory", "milestone", "trip"] as QuickKind[]).map((kind) => (
           <button key={kind} type="button" className="choice-tile" onClick={() => onPick(kind)}>
             {quickKindLabels[kind]}
           </button>
@@ -151,8 +156,8 @@ export function QuickEntryForm({
   const set = <K extends keyof QuickDraft>(key: K, value: QuickDraft[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const editing = Boolean(initial.id);
   const valid =
-    draft.kind === "milestone" ? draft.title.trim() !== "" : draft.content.trim() !== "" || draft.title.trim() !== "";
-  const endBeforeStart = draft.kind === "milestone" && draft.end_date !== "" && draft.end_date < draft.date;
+    conRango(draft.kind) ? draft.title.trim() !== "" : draft.content.trim() !== "" || draft.title.trim() !== "";
+  const endBeforeStart = conRango(draft.kind) && draft.end_date !== "" && draft.end_date < draft.date;
 
   return (
     <Sheet title={`${editing ? "Editar" : "Nuevo"} ${quickKindLabels[draft.kind].toLowerCase()}`} onClose={onClose}>
@@ -164,24 +169,28 @@ export function QuickEntryForm({
         }}
       >
         <label className="grid gap-1.5 text-sm">
-          <span className="font-medium text-foreground">{draft.kind === "milestone" ? "Qué" : "Título"}</span>
+          <span className="font-medium text-foreground">
+            {draft.kind === "milestone" ? "Qué" : draft.kind === "trip" ? "Adónde" : "Título"}
+          </span>
           <input
-            autoFocus={draft.kind === "milestone"}
+            autoFocus={conRango(draft.kind)}
             className="field"
             value={draft.title}
             onChange={(e) => set("title", e.target.value)}
-            placeholder={draft.kind === "milestone" ? "Ej.: Dep. Sonido Congregación" : "Opcional"}
+            placeholder={draft.kind === "milestone" ? "Ej.: Dep. Sonido Congregación" : draft.kind === "trip" ? "Ej.: Mar del Plata" : "Opcional"}
           />
         </label>
 
-        <div className={`grid gap-3 ${draft.kind === "milestone" ? "grid-cols-2" : "grid-cols-1"}`}>
+        <div className={`grid gap-3 ${conRango(draft.kind) ? "grid-cols-2" : "grid-cols-1"}`}>
           <label className="grid gap-1.5 text-sm">
-            <span className="font-medium text-foreground">{draft.kind === "milestone" ? "Desde" : "Fecha"}</span>
+            <span className="font-medium text-foreground">{draft.kind === "trip" ? "Ida" : draft.kind === "milestone" ? "Desde" : "Fecha"}</span>
             <input type="date" className="field" value={draft.date} onChange={(e) => set("date", e.target.value)} required />
           </label>
-          {draft.kind === "milestone" ? (
+          {conRango(draft.kind) ? (
             <label className="grid gap-1.5 text-sm">
-              <span className="font-medium text-foreground">Hasta <span className="text-muted">(opcional)</span></span>
+              <span className="font-medium text-foreground">
+                {draft.kind === "trip" ? "Vuelta" : "Hasta"} <span className="text-muted">(opcional)</span>
+              </span>
               <input type="date" className="field" value={draft.end_date} onChange={(e) => set("end_date", e.target.value)} />
             </label>
           ) : null}
@@ -204,14 +213,14 @@ export function QuickEntryForm({
         ) : null}
 
         <label className="grid gap-1.5 text-sm">
-          <span className="font-medium text-foreground">{draft.kind === "milestone" ? "Nota" : "Texto"}</span>
+          <span className="font-medium text-foreground">{conRango(draft.kind) ? "Nota" : "Texto"}</span>
           <textarea
-            autoFocus={draft.kind !== "milestone"}
+            autoFocus={!conRango(draft.kind)}
             className="field min-h-28 resize-y"
-            rows={draft.kind === "milestone" ? 2 : 6}
+            rows={conRango(draft.kind) ? 2 : 6}
             value={draft.content}
             onChange={(e) => set("content", e.target.value)}
-            placeholder={draft.kind === "milestone" ? "Opcional" : "Lo que quieras guardar"}
+            placeholder={draft.kind === "trip" ? "Con quién, qué hicieron… (opcional)" : draft.kind === "milestone" ? "Opcional" : "Lo que quieras guardar"}
           />
         </label>
 

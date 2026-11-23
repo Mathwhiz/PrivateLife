@@ -7,7 +7,9 @@ export type EntryType =
   | "anime"
   | "manga"
   | "game"
-  | "note";
+  | "note"
+  /** Un registro por fecha: ánimo, sueño y la frase del día. */
+  | "day";
 
 export type EntrySection =
   | "general"
@@ -42,6 +44,12 @@ export type LifeEntry = {
   steam_appid?: number;
   /** Hitos con duración: "desde" es `date`, "hasta" es esto. */
   end_date?: string;
+  /** Solo "day": ánimo del 1 al 5. */
+  animo?: number;
+  /** Solo "day": a qué hora te despertaste esa mañana ("07:30"). */
+  desperte?: string;
+  /** Solo "day": a qué hora te dormiste esa noche (puede ser pasada la medianoche, "01:15"). */
+  dormi?: string;
   /** Cuándo se cargó (ISO). Solo lo tienen las entradas creadas desde la app nueva. */
   created_at?: string;
 };
@@ -56,6 +64,7 @@ export const entryTypeLabels: Record<EntryType, string> = {
   manga: "Manga",
   game: "Videojuego",
   note: "Nota",
+  day: "Día",
 };
 
 export const entrySectionLabels: Record<EntrySection, string> = {
@@ -82,6 +91,7 @@ export const sectionOptionsByType: Record<EntryType, EntrySection[]> = {
   manga: ["manga"],
   game: ["game"],
   note: ["philosophy", "thought", "general"],
+  day: ["general"],
 };
 
 export const initialEntries: LifeEntry[] = [

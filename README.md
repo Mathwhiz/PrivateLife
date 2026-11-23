@@ -11,7 +11,7 @@ Un segundo cerebro personal. Registrá hábitos, biblioteca, escritos, hitos y m
 | Sección | Descripción |
 |---|---|
 | Hoy | Inicio: hábitos del día, resumen de Salud, «En este día» y lo último cargado |
-| Registro | Lo que hiciste cada día (bueno, malo o juegos): última vez, cada cuánto y un mapa de calor por año. Los ítems con el mismo grupo van en una fila con un tick cada uno (ej.: Dientes 1·2·3, JW, Ejercicio) |
+| Registro | Lo que hiciste cada día (bueno, malo o juegos): última vez, cada cuánto y un mapa de calor por año. Los ítems con el mismo grupo van en una fila con un tick cada uno, y `marca:<ítem>` enlaza ítems (Reunión → Jw). Arriba, «Tu día»: ánimo del 1 al 5, a qué hora te dormiste y despertaste, y una frase opcional |
 | Biblioteca | Películas, series, libros, anime, manga y videojuegos — con tapa, rating, géneros y filtros |
 | Mi vida | Hitos (con fecha de inicio y fin, y un gráfico de períodos), textos y recuerdos en una línea de tiempo |
 | Salud | Comidas, movimiento y peso leídos de una planilla de Google (vía Apps Script + edge function `salud`), con objetivos, peso promedio por semana y proyección a la meta |

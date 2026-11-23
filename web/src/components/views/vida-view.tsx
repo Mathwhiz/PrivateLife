@@ -20,6 +20,7 @@ const filtros: { id: Filtro; label: string }[] = [
   { id: "milestone", label: "Hitos" },
   { id: "note", label: "Textos" },
   { id: "memory", label: "Recuerdos" },
+  { id: "trip", label: "Viajes" },
 ];
 
 export function VidaView({ entries, openEntry, verResumen }: VidaViewProps) {
@@ -41,7 +42,7 @@ export function VidaView({ entries, openEntry, verResumen }: VidaViewProps) {
     <div className="space-y-5">
       <ViewHeader
         title="Mi vida"
-        description="Hitos, textos y recuerdos en una sola línea de tiempo."
+        description="Hitos, viajes, textos y recuerdos en una sola línea de tiempo."
         aside={
           <div className="flex flex-wrap gap-2">
             <button type="button" className="secondary-button" onClick={verResumen}>
@@ -85,7 +86,7 @@ export function VidaView({ entries, openEntry, verResumen }: VidaViewProps) {
                       <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">
                         {kind === "note" ? entrySectionLabels[e.section ?? "general"] : quickKindLabels[kind]} ·{" "}
                         {kind === "milestone" ? fechaHito(e.date, aprox) : aprox ? e.date.slice(0, 4) : formatDate(e.date)}
-                        {e.end_date ? ` → ${fechaHito(e.end_date, aprox)}` : ""}
+                        {e.end_date ? ` → ${kind === "trip" ? formatDate(e.end_date) : fechaHito(e.end_date, aprox)}` : ""}
                         {aprox ? " · aprox." : ""}
                       </p>
                       <h4 className="mt-1 text-[0.95rem] font-medium tracking-[-0.01em] text-foreground">{e.title}</h4>

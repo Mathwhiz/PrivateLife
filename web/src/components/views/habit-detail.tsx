@@ -3,6 +3,7 @@ import { YearHeatmap } from "@/components/ui/heatmap";
 import { daysBetween, formatDate, todayAR, type HabitStats } from "@/lib/entries";
 import { type HabitCatalogItem } from "@/lib/use-habits";
 import { acento, itemColor } from "@/lib/type-style";
+import { type LifeEntry } from "@/lib/types";
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -20,6 +21,7 @@ export function HabitDetail({
   habit,
   stats,
   catalog,
+  dias,
   onSelect,
   onBack,
   onEdit,
@@ -27,6 +29,7 @@ export function HabitDetail({
   habit: HabitCatalogItem;
   stats: HabitStats;
   catalog: HabitCatalogItem[];
+  dias: Map<string, LifeEntry>;
   onSelect: (title: string) => void;
   onBack: () => void;
   onEdit: () => void;
@@ -42,6 +45,12 @@ export function HabitDetail({
   // De lunes a domingo (weekdayCounts viene de domingo a sábado).
   const semana = [1, 2, 3, 4, 5, 6, 0].map((i) => stats.weekdayCounts[i]);
   const topeSemana = Math.max(...semana, 1);
+
+  // Ánimo promedio los días que sí y los que no (solo desde que se anota el ánimo).
+  const con: number[] = [];
+  const sin: number[] = [];
+  for (const [fecha, dia] of dias) if (dia.animo) (fechas.has(fecha) ? con : sin).push(dia.animo);
+  const prom = (xs: number[]) => (xs.reduce((a, b) => a + b, 0) / xs.length).toLocaleString("es-AR", { maximumFractionDigits: 1 });
 
   const cadaCuanto =
     stats.avgGap90 === null
@@ -105,6 +114,12 @@ export function HabitDetail({
           <p className="mt-4 text-xs text-muted">
             Máximo de días seguidos: {stats.bestStreak}
             {stats.currentStreak > 1 ? ` · ahora van ${stats.currentStreak}` : ""}
+          </p>
+        ) : null}
+        {con.length >= 5 && sin.length >= 5 ? (
+          <p className="mt-2 text-xs text-muted">
+            Ánimo promedio: <span className="text-foreground">{prom(con)}</span> los días con {habit.title} ·{" "}
+            <span className="text-foreground">{prom(sin)}</span> los días sin ({con.length + sin.length} días con ánimo anotado)
           </p>
         ) : null}
       </header>

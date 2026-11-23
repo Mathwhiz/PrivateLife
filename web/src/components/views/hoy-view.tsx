@@ -7,6 +7,8 @@ import { TypeBadge } from "@/components/ui/common";
 import { acento, cardColor, typeKeyOf } from "@/lib/type-style";
 import { armarFilas } from "@/lib/grupos";
 import { FilasRegistro } from "@/components/ui/filas-registro";
+import { TuDia } from "@/components/ui/tu-dia";
+import { type CambiosDia } from "@/lib/dia";
 import type { AppView } from "@/lib/app-config";
 
 type HoyViewProps = {
@@ -18,6 +20,8 @@ type HoyViewProps = {
   salud: RegistroSaludState;
   goTo: (view: AppView) => void;
   openEntry: (entry: LifeEntry) => void;
+  dias: Map<string, LifeEntry>;
+  cambiarDia: (fecha: string, cambios: CambiosDia) => void;
 };
 
 const kcal = (n: number) => Math.round(n).toLocaleString("es-AR");
@@ -36,17 +40,17 @@ function fechasDudosas(entries: LifeEntry[]) {
     (porFecha.get(e.date) ?? 0) > 5;
 }
 
-export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, salud, goTo, openEntry }: HoyViewProps) {
+export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, salud, goTo, openEntry, dias, cambiarDia }: HoyViewProps) {
   const hoy = todayAR();
   const anio = Number(hoy.slice(0, 4));
 
   const enEsteDia = useMemo(() => {
     const dudosa = fechasDudosas(entries);
-    return entries
-      .filter((e) => e.date.slice(5) === hoy.slice(5) && e.date < hoy && !dudosa(e))
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 8);
-  }, [entries, hoy]);
+    // Las frases del día de otros años van primero: son lo más personal.
+    const frases = [...dias.values()].filter((d) => d.content.trim() && d.date.slice(5) === hoy.slice(5) && d.date < hoy);
+    const otras = entries.filter((e) => e.date.slice(5) === hoy.slice(5) && e.date < hoy && !dudosa(e));
+    return [...frases, ...otras].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+  }, [entries, dias, hoy]);
 
   const filas = useMemo(() => armarFilas(habitCatalog), [habitCatalog]);
 
@@ -80,6 +84,13 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
         <p className="section-kicker">Hoy</p>
         <h2 className="mt-1.5 text-2xl font-medium tracking-[-0.03em] text-foreground first-letter:uppercase">{fechaLarga}</h2>
       </header>
+
+      <section className="rounded-xl border border-border bg-panel px-4 py-4" style={acento(cardColor.ambar)}>
+        <p className="section-kicker">Tu día</p>
+        <div className="mt-3">
+          <TuDia fecha={hoy} dias={dias} cambiar={cambiarDia} />
+        </div>
+      </section>
 
       <div className="grid gap-4 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section className="rounded-xl border border-border bg-panel px-4 py-4" style={acento(cardColor.agua)}>
@@ -129,12 +140,18 @@ export function HoyView({ entries, habitCatalog, doneToday, toggleHabitToday, sa
               <ul className="mt-3 grid gap-2">
                 {enEsteDia.map((e) => (
                   <li key={e.id}>
-                    <button type="button" className="w-full text-left" onClick={() => openEntry(e)}>
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      onClick={() => (e.type === "day" ? goTo("habits") : openEntry(e))}
+                    >
                       <span className="flex items-center gap-2 text-xs text-muted">
                         <TypeBadge entry={e} />
                         Hace {anio - Number(e.date.slice(0, 4))} {anio - Number(e.date.slice(0, 4)) === 1 ? "año" : "años"}
                       </span>
-                      <span className="block truncate text-sm text-foreground">{e.title}</span>
+                      <span className={`block text-sm text-foreground ${e.type === "day" ? "italic" : "truncate"}`}>
+                        {e.type === "day" ? `«${e.content}»` : e.title}
+                      </span>
                     </button>
                   </li>
                 ))}

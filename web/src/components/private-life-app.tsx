@@ -16,6 +16,7 @@ import { LoginScreen } from "@/components/login-screen";
 import { AppConfig, AppView, CONFIG_KEY, loadConfig } from "@/lib/app-config";
 import { HabitDraft, HabitViewMode, daysBetween, isPendiente, MediaFormState, defaultHabitDraft, defaultMediaForm, entryToMediaForm, habitHiddenTag, habitTemplateTag, makeEntryId, mediaFormToEntry, mediaTypes, normalizeHabitTitle, sortEntries, systemMediaTags, todayAR } from "@/lib/entries";
 import { useHabits } from "@/lib/use-habits";
+import { actualizarDia, type CambiosDia } from "@/lib/dia";
 import { ARCHIVADO, GRUPO_PREFIJO, esArchivado, esEtiquetaDePlantilla, grupoDe, tambienMarca } from "@/lib/grupos";
 import { acento, sectionColor } from "@/lib/type-style";
 import { useRegistroSalud } from "@/lib/use-registro-salud";
@@ -229,7 +230,16 @@ export function PrivateLifeApp() {
   }, [habitCatalog, habitLogs, habitTemplateEntries, today]);
 
   // Todo menos los registros de hábitos (son ~8.400 y solo ensucian listas y búsqueda).
-  const lifeEntries = useMemo(() => normalizedEntries.filter((entry) => entry.type !== "habit"), [normalizedEntries]);
+  const lifeEntries = useMemo(
+    () => normalizedEntries.filter((entry) => entry.type !== "habit" && entry.type !== "day"),
+    [normalizedEntries],
+  );
+  // Ánimo, sueño y frase: un registro por fecha.
+  const dias = useMemo(
+    () => new Map(normalizedEntries.filter((entry) => entry.type === "day").map((entry) => [entry.date, entry])),
+    [normalizedEntries],
+  );
+  const cambiarDia = (fecha: string, cambios: CambiosDia) => setEntries((current) => actualizarDia(current, fecha, cambios));
   const vidaEntries = useMemo(
     () => lifeEntries.filter((entry) => entry.type === "note" || entry.type === "memory"),
     [lifeEntries],
@@ -318,7 +328,17 @@ export function PrivateLifeApp() {
     // Ítems enlazados (ej.: Libro → Leer) siguen al que se tocó.
     const habitMeta = habitCatalog.find((habit) => habit.title === title);
     for (const otro of habitMeta ? tambienMarca(habitMeta) : []) {
-      if (otro !== title) ponerHabito(otro, date, marcar);
+      if (otro === title) continue;
+      // Al desmarcar, el enlazado queda si otro ítem marcado ese día también lo trae (Reunión y Predicación → Jw).
+      const loSostieneOtro =
+        !marcar &&
+        habitCatalog.some(
+          (h) =>
+            h.title !== title &&
+            tambienMarca(h).includes(otro) &&
+            habitLogs.some((entry) => entry.title === h.title && entry.date === date),
+        );
+      if (!loSostieneOtro) ponerHabito(otro, date, marcar);
     }
   }
 
@@ -776,6 +796,8 @@ export function PrivateLifeApp() {
               habitCatalog={activeHabits}
               doneToday={doneToday}
               toggleHabitToday={(title) => toggleHabit(title, today)}
+              dias={dias}
+              cambiarDia={cambiarDia}
               salud={salud}
               goTo={setActiveView}
               openEntry={openEntry}
@@ -801,6 +823,8 @@ export function PrivateLifeApp() {
               setSelectedHabit={setSelectedHabit}
               startEditingHabit={startEditingHabit}
               toggleHabit={(title) => toggleHabit(title)}
+              dias={dias}
+              cambiarDia={cambiarDia}
             />
           ) : null}
 
@@ -834,7 +858,7 @@ export function PrivateLifeApp() {
 
           {activeView === "vida" ? <VidaView entries={vidaEntries} openEntry={openEntry} verResumen={() => setActiveView("resumen")} /> : null}
 
-          {activeView === "resumen" ? <ResumenView entries={normalizedEntries} dias={salud.dias} openEntry={openEntry} /> : null}
+          {activeView === "resumen" ? <ResumenView entries={normalizedEntries.filter((entry) => entry.type !== "day")} dias={salud.dias} openEntry={openEntry} /> : null}
 
           {activeView === "ajustes" ? (
             <SettingsView
@@ -887,7 +911,7 @@ export function PrivateLifeApp() {
         />
       ) : null}
 
-      {searchOpen ? <SearchOverlay entries={normalizedEntries} onOpen={openEntry} onClose={() => setSearchOpen(false)} /> : null}
+      {searchOpen ? <SearchOverlay entries={normalizedEntries.filter((entry) => entry.type !== "day")} onOpen={openEntry} onClose={() => setSearchOpen(false)} /> : null}
 
       {undoDelete ? (
         <div className="undo-toast" role="status">

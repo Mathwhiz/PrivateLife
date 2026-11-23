@@ -385,6 +385,34 @@ a {
   font-weight: 700;
 }
 
+/* Ánimo del día: 5 caritas. */
+.animo-boton {
+  display: inline-flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  padding: 0.45rem 0;
+  filter: grayscale(0.85);
+  opacity: 0.7;
+  transition: border-color 120ms ease, background-color 120ms ease, opacity 120ms ease, filter 120ms ease;
+}
+
+.animo-boton:hover {
+  opacity: 1;
+  filter: none;
+}
+
+.animo-boton-activo {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 17%, transparent);
+  opacity: 1;
+  filter: none;
+}
+
 /* Grupos del Registro: una fila con un tick por ítem. */
 .habit-group {
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));

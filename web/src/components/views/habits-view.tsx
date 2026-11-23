@@ -3,6 +3,8 @@ import { EmptyState, ViewHeader } from "@/components/ui/common";
 import { HabitDetail } from "@/components/views/habit-detail";
 import { armarFilas, esArchivado, grupoDe } from "@/lib/grupos";
 import { FilasRegistro } from "@/components/ui/filas-registro";
+import { TuDia } from "@/components/ui/tu-dia";
+import { type CambiosDia } from "@/lib/dia";
 import { defaultHabitDraft, type HabitDraft, type HabitStats, type HabitViewMode } from "@/lib/entries";
 import { type LifeEntry } from "@/lib/types";
 
@@ -25,6 +27,8 @@ type HabitsViewProps = {
   setSelectedHabit: Dispatch<SetStateAction<string | null>>;
   startEditingHabit: (title: string) => void;
   toggleHabit: (title: string) => void;
+  dias: Map<string, LifeEntry>;
+  cambiarDia: (fecha: string, cambios: CambiosDia) => void;
 };
 
 export function HabitsView({
@@ -45,6 +49,8 @@ export function HabitsView({
   setSelectedHabit,
   startEditingHabit,
   toggleHabit,
+  dias,
+  cambiarDia,
 }: HabitsViewProps) {
   return (
             <div className="space-y-5">
@@ -90,6 +96,13 @@ export function HabitsView({
                       +
                     </button>
                   </div>
+
+                  <section className="rounded-xl border border-border bg-panel px-4 py-4">
+                    <p className="section-kicker">Tu día</p>
+                    <div className="mt-3">
+                      <TuDia fecha={habitDate} dias={dias} cambiar={cambiarDia} />
+                    </div>
+                  </section>
 
                     <div className="grid gap-2 @xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4">
                       <FilasRegistro
@@ -185,6 +198,7 @@ export function HabitsView({
                     habit={selectedHabitMeta}
                     stats={habitStats}
                     catalog={habitCatalog}
+                    dias={dias}
                     onSelect={setSelectedHabit}
                     onBack={() => setHabitViewMode("checklist")}
                     onEdit={() => {
