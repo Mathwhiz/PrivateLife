@@ -25,6 +25,8 @@ export const esEtiquetaDePlantilla = (tag: string) =>
 
 export const esArchivado = (item: { tags: string[] }) => item.tags.includes(ARCHIVADO);
 
+const ORDEN_GRUPOS = ["jw", "ejercicio", "social", "entretenimiento", "vicio", "del día", "dientes"];
+
 export type FilaRegistro =
   | { tipo: "solo"; item: HabitCatalogItem }
   | { tipo: "grupo"; nombre: string; items: { item: HabitCatalogItem; etiqueta: string }[] };
@@ -67,5 +69,11 @@ export function armarFilas(catalogo: HabitCatalogItem[]): FilaRegistro[] {
     filas.push({ tipo: "grupo", nombre: g, items: items.map((item, i) => ({ item, etiqueta: nombres[i] })) });
   }
   // Los grupos ocupan todo el ancho: arriba, para no dejar huecos entre los sueltos.
-  return [...filas.filter((f) => f.tipo === "grupo"), ...filas.filter((f) => f.tipo === "solo")];
+  // Orden fijo (igual en Hoy y en Registro); los grupos nuevos van al final.
+  const lugar = (f: FilaRegistro) => {
+    const i = f.tipo === "grupo" ? ORDEN_GRUPOS.indexOf(f.nombre.toLowerCase()) : -1;
+    return i === -1 ? ORDEN_GRUPOS.length : i;
+  };
+  const grupos = filas.filter((f) => f.tipo === "grupo").sort((a, b) => lugar(a) - lugar(b));
+  return [...grupos, ...filas.filter((f) => f.tipo === "solo")];
 }

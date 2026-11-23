@@ -80,11 +80,15 @@ export function HabitsView({
 
               {habitViewMode === "checklist" ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="section-kicker">Checklist</p>
-                      <p className="mt-1 text-sm text-muted">Tocá lo que hiciste y listo.</p>
+                  <section className="rounded-xl border border-border bg-panel px-4 py-4">
+                    <p className="section-kicker">Tu día</p>
+                    <div className="mt-3">
+                      <TuDia fecha={habitDate} dias={dias} cambiar={cambiarDia} />
                     </div>
+                  </section>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="section-kicker">Qué hiciste</p>
                     <button
                       type="button"
                       className="habit-add-button"
@@ -96,13 +100,6 @@ export function HabitsView({
                       +
                     </button>
                   </div>
-
-                  <section className="rounded-xl border border-border bg-panel px-4 py-4">
-                    <p className="section-kicker">Tu día</p>
-                    <div className="mt-3">
-                      <TuDia fecha={habitDate} dias={dias} cambiar={cambiarDia} />
-                    </div>
-                  </section>
 
                     <div className="grid gap-2 @xl:grid-cols-2 @4xl:grid-cols-3 @7xl:grid-cols-4">
                       <FilasRegistro
