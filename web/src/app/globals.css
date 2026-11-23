@@ -978,3 +978,13 @@ a {
   border-radius: 999px;
   background: var(--dot, var(--muted));
 }
+
+/* En PC manda el menú lateral: sin barra de abajo ni botón flotante.
+   Va al final del archivo porque "xl:hidden" (capa de utilidades) pierde contra
+   el display de .bottom-nav y .fab, que no están en ninguna capa. */
+@media (min-width: 1280px) {
+  .bottom-nav,
+  .fab {
+    display: none;
+  }
+}
