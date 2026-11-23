@@ -221,11 +221,9 @@ export function PrivateLifeApp() {
       habitTemplateEntries.filter((entry) => daysBetween(today, entry.date) <= 44).map((entry) => entry.title),
     );
     const usables = habitCatalog.filter((habit) => !esArchivado(habit));
-    const gruposActivos = new Set(
-      usables.filter((h) => counts.has(h.title) || nuevos.has(h.title)).map(grupoDe).filter(Boolean),
-    );
+    // Lo que está en un grupo se eligió a propósito: aparece siempre, aunque haga meses que no se marque.
     const active = usables.filter(
-      (habit) => counts.has(habit.title) || nuevos.has(habit.title) || gruposActivos.has(grupoDe(habit)),
+      (habit) => counts.has(habit.title) || nuevos.has(habit.title) || grupoDe(habit) !== null,
     );
     return [...(active.length ? active : usables)].sort((a, b) => (counts.get(b.title) ?? 0) - (counts.get(a.title) ?? 0));
   }, [habitCatalog, habitLogs, habitTemplateEntries, today]);
