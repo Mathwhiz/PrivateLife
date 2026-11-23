@@ -387,9 +387,9 @@ a {
 
 /* Grupos del Registro: una fila con un tick por ítem. */
 .habit-group {
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
   border-radius: 0.55rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
   padding: 0.55rem 0.65rem 0.65rem;
   font-size: 0.875rem;
   color: var(--foreground);
@@ -402,6 +402,7 @@ a {
 }
 
 .habit-group-name {
+  color: var(--accent);
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
@@ -415,7 +416,7 @@ a {
   align-items: center;
   gap: 0.45rem;
   min-height: 2.1rem;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
   border-radius: 0.45rem;
   padding: 0.3rem 0.7rem 0.3rem 0.45rem;
   font-size: 0.82rem;

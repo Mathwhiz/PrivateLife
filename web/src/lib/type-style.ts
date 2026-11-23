@@ -68,6 +68,20 @@ export function itemColor(title: string) {
   return paletaItems[h % paletaItems.length];
 }
 
+/** Color fijo de cada grupo del Registro; los que no están acá salen del nombre, como los ítems. */
+const coloresGrupo: Record<string, string> = {
+  jw: HEX.violeta,
+  vicio: HEX.coral,
+  ejercicio: HEX.verde,
+  "del día": HEX.cielo,
+  entretenimiento: HEX.agua,
+  dientes: HEX.oro,
+};
+
+export function grupoColor(nombre: string) {
+  return coloresGrupo[nombre.toLowerCase()] ?? itemColor(nombre);
+}
+
 /** Estilo que pinta un bloque (y todo lo de adentro) con ese color de acento. */
 export function acento(hex: string) {
   return { "--accent": hex, "--accent-soft": `${hex}26` } as React.CSSProperties;

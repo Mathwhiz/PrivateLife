@@ -1,5 +1,5 @@
 import { type FilaRegistro } from "@/lib/grupos";
-import { acento, itemColor } from "@/lib/type-style";
+import { acento, grupoColor, itemColor } from "@/lib/type-style";
 
 type Props = {
   filas: FilaRegistro[];
@@ -44,7 +44,7 @@ export function FilasRegistro({ filas, hecho, toggle, onVer }: Props) {
           <div
             key={`grupo-${fila.nombre}`}
             className={`habit-group col-span-full ${alguno ? "habit-group-active" : ""}`}
-            style={acento(itemColor(fila.nombre))}
+            style={acento(grupoColor(fila.nombre))}
           >
             <div className="flex items-center justify-between gap-3">
               {conTodo ? (
@@ -61,7 +61,7 @@ export function FilasRegistro({ filas, hecho, toggle, onVer }: Props) {
                   <span className="truncate">{fila.nombre}</span>
                 </button>
               ) : (
-                <span className="habit-group-name text-muted">{fila.nombre}</span>
+                <span className="habit-group-name">{fila.nombre}</span>
               )}
               {onVer ? (
                 <button type="button" className="habit-inline-link" onClick={() => onVer(fila.items[0].item.title)}>
