@@ -86,7 +86,7 @@ export function VidaView({ entries, openEntry, verResumen }: VidaViewProps) {
                       <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">
                         {kind === "note" ? entrySectionLabels[e.section ?? "general"] : quickKindLabels[kind]} ·{" "}
                         {kind === "milestone" ? fechaHito(e.date, aprox) : aprox ? e.date.slice(0, 4) : formatDate(e.date)}
-                        {e.end_date ? ` → ${kind === "trip" ? formatDate(e.end_date) : fechaHito(e.end_date, aprox)}` : ""}
+                        {e.end_date ? ` → ${kind === "trip" ? formatDate(e.end_date) : fechaHito(e.end_date, aprox)}` : e.tags.includes("en-curso") ? " → hoy" : ""}
                         {aprox ? " · aprox." : ""}
                       </p>
                       <h4 className="mt-1 text-[0.95rem] font-medium tracking-[-0.01em] text-foreground">{e.title}</h4>

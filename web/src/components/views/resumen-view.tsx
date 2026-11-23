@@ -58,7 +58,7 @@ export function ResumenView({ entries, dias, openEntry }: ResumenViewProps) {
     .filter((e) => e.type === "memory" && e.tags.includes("milestone"))
     .filter((e) => {
       const desde = Number(e.date.slice(0, 4));
-      const hasta = e.end_date ? Number(e.end_date.slice(0, 4)) : desde;
+      const hasta = e.end_date ? Number(e.end_date.slice(0, 4)) : e.tags.includes("en-curso") ? actual : desde;
       return desde <= anio && anio <= hasta;
     })
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -170,7 +170,7 @@ export function ResumenView({ entries, dias, openEntry }: ResumenViewProps) {
                         <span className="flex items-center gap-2 text-xs text-muted">
                           <TypeBadge entry={h} />
                           {fechaHito(h.date, aprox)}
-                          {h.end_date ? ` → ${fechaHito(h.end_date, aprox)}` : ""}
+                          {h.end_date ? ` → ${fechaHito(h.end_date, aprox)}` : h.tags.includes("en-curso") ? " → hoy" : ""}
                         </span>
                         <span className="block text-sm text-foreground">{h.title}</span>
                       </button>
